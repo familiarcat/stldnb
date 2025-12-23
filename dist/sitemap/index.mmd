@@ -1,48 +1,102 @@
-%%{init: {"securityLevel":"loose"}}%%
-flowchart TD
-  site_root["www.stldnb.com"]:::root
-  legend["Legend: solid = pages • dashed = image assets • click section to drill down"]:::legend
-  site_root --> legend
-  n_seg_root_93935f88["(root)"]:::section
-  site_root --> n_seg_root_93935f88
-  click n_seg_root_93935f88 "sections/root.html"
-  n_seg_artist_page_ce5456f0["artist-page"]:::section
-  site_root --> n_seg_artist_page_ce5456f0
-  click n_seg_artist_page_ce5456f0 "sections/artist-page.html"
-  n_seg_blog_cc04b70b["blog"]:::section
-  site_root --> n_seg_blog_cc04b70b
-  click n_seg_blog_cc04b70b "sections/blog.html"
-  n_seg_cart_45709fdd["cart"]:::section
-  site_root --> n_seg_cart_45709fdd
-  click n_seg_cart_45709fdd "sections/cart.html"
-  n_seg_checkout_ded27007["checkout"]:::section
-  site_root --> n_seg_checkout_ded27007
-  click n_seg_checkout_ded27007 "sections/checkout.html"
-  n_seg_contact_de334b3d["contact"]:::section
-  site_root --> n_seg_contact_de334b3d
-  click n_seg_contact_de334b3d "sections/contact.html"
-  n_seg_dj_4f3cb525["dj"]:::section
-  site_root --> n_seg_dj_4f3cb525
-  click n_seg_dj_4f3cb525 "sections/dj.html"
-  n_seg_events_ba2a4bce["events"]:::section
-  site_root --> n_seg_events_ba2a4bce
-  click n_seg_events_ba2a4bce "sections/events.html"
-  n_seg_labels_93fff7c0["labels"]:::section
-  site_root --> n_seg_labels_93fff7c0
-  click n_seg_labels_93fff7c0 "sections/labels.html"
-  n_seg_landing_ba724a1a["landing"]:::section
-  site_root --> n_seg_landing_ba724a1a
-  click n_seg_landing_ba724a1a "sections/landing.html"
-  n_seg_mix_upload_28fb3b87["mix-upload"]:::section
-  site_root --> n_seg_mix_upload_28fb3b87
-  click n_seg_mix_upload_28fb3b87 "sections/mix-upload.html"
-  n_seg_my_account_be799d0b["my-account"]:::section
-  site_root --> n_seg_my_account_be799d0b
-  click n_seg_my_account_be799d0b "sections/my-account.html"
-  n_seg_shop_5c75cd27["shop"]:::section
-  site_root --> n_seg_shop_5c75cd27
-  click n_seg_shop_5c75cd27 "sections/shop.html"
+flowchart TB
+site_root["www.stldnb.com"]:::root
 
-  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;
-  classDef section font-weight:bold,stroke:#555,fill:#f3f3f3;
-  classDef legend stroke:#bbb,fill:#fff;
+subgraph col0[" "]
+  direction TB
+  p0_0["https://www.stldnb.com/blog/"]:::page
+  click p0_0 "https://www.stldnb.com/blog/"
+  site_root --> p0_0
+  p0_1["https://www.stldnb.com/blog/2025/06/11/that-real-shit/"]:::page
+  click p0_1 "https://www.stldnb.com/blog/2025/06/11/that-real-shit/"
+  site_root --> p0_1
+  p0_2["https://www.stldnb.com/blog/2025/06/11/the-renegade-steppas/"]:::page
+  click p0_2 "https://www.stldnb.com/blog/2025/06/11/the-renegade-steppas/"
+  site_root --> p0_2
+  p0_3["https://www.stldnb.com/checkout/"]:::page
+  click p0_3 "https://www.stldnb.com/checkout/"
+  site_root --> p0_3
+  p0_4["https://www.stldnb.com/artist-page/"]:::page
+  click p0_4 "https://www.stldnb.com/artist-page/"
+  site_root --> p0_4
+  p0_5["https://www.stldnb.com/landing/"]:::page
+  click p0_5 "https://www.stldnb.com/landing/"
+  site_root --> p0_5
+  p0_6["https://www.stldnb.com/blog/category/liquid/"]:::page
+  click p0_6 "https://www.stldnb.com/blog/category/liquid/"
+  site_root --> p0_6
+end
+
+subgraph col1[" "]
+  direction TB
+  p1_0["https://www.stldnb.com/blog/2025/06/11/yeah-yeah-yeah-o-yeah/"]:::page
+  click p1_0 "https://www.stldnb.com/blog/2025/06/11/yeah-yeah-yeah-o-yeah/"
+  site_root --> p1_0
+  p1_1["https://www.stldnb.com/blog/2025/06/11/you-know-what/"]:::page
+  click p1_1 "https://www.stldnb.com/blog/2025/06/11/you-know-what/"
+  site_root --> p1_1
+  p1_2["https://www.stldnb.com/"]:::page
+  click p1_2 "https://www.stldnb.com/"
+  site_root --> p1_2
+  p1_3["https://www.stldnb.com/my-account/"]:::page
+  click p1_3 "https://www.stldnb.com/my-account/"
+  site_root --> p1_3
+  p1_4["https://www.stldnb.com/events/"]:::page
+  click p1_4 "https://www.stldnb.com/events/"
+  site_root --> p1_4
+  p1_5["https://www.stldnb.com/blog/category/atmospheric/"]:::page
+  click p1_5 "https://www.stldnb.com/blog/category/atmospheric/"
+  site_root --> p1_5
+  p1_6["https://www.stldnb.com/blog/category/minimum-halftime/"]:::page
+  click p1_6 "https://www.stldnb.com/blog/category/minimum-halftime/"
+  site_root --> p1_6
+end
+
+subgraph col2[" "]
+  direction TB
+  p2_0["https://www.stldnb.com/blog/2025/06/11/boom-boom-shake-shake/"]:::page
+  click p2_0 "https://www.stldnb.com/blog/2025/06/11/boom-boom-shake-shake/"
+  site_root --> p2_0
+  p2_1["https://www.stldnb.com/blog/2025/06/11/this-is-the-ish/"]:::page
+  click p2_1 "https://www.stldnb.com/blog/2025/06/11/this-is-the-ish/"
+  site_root --> p2_1
+  p2_2["https://www.stldnb.com/shop/"]:::page
+  click p2_2 "https://www.stldnb.com/shop/"
+  site_root --> p2_2
+  p2_3["https://www.stldnb.com/dj/"]:::page
+  click p2_3 "https://www.stldnb.com/dj/"
+  site_root --> p2_3
+  p2_4["https://www.stldnb.com/contact/"]:::page
+  click p2_4 "https://www.stldnb.com/contact/"
+  site_root --> p2_4
+  p2_5["https://www.stldnb.com/blog/category/jump-up/"]:::page
+  click p2_5 "https://www.stldnb.com/blog/category/jump-up/"
+  site_root --> p2_5
+  p2_6["https://www.stldnb.com/blog/category/neurofunk/"]:::page
+  click p2_6 "https://www.stldnb.com/blog/category/neurofunk/"
+  site_root --> p2_6
+end
+
+subgraph col3[" "]
+  direction TB
+  p3_0["https://www.stldnb.com/blog/2025/06/11/drum-and-bass/"]:::page
+  click p3_0 "https://www.stldnb.com/blog/2025/06/11/drum-and-bass/"
+  site_root --> p3_0
+  p3_1["https://www.stldnb.com/blog/2025/06/11/testing-the-mix/"]:::page
+  click p3_1 "https://www.stldnb.com/blog/2025/06/11/testing-the-mix/"
+  site_root --> p3_1
+  p3_2["https://www.stldnb.com/cart/"]:::page
+  click p3_2 "https://www.stldnb.com/cart/"
+  site_root --> p3_2
+  p3_3["https://www.stldnb.com/mix-upload/"]:::page
+  click p3_3 "https://www.stldnb.com/mix-upload/"
+  site_root --> p3_3
+  p3_4["https://www.stldnb.com/labels/"]:::page
+  click p3_4 "https://www.stldnb.com/labels/"
+  site_root --> p3_4
+  p3_5["https://www.stldnb.com/blog/category/jungle-old-school/"]:::page
+  click p3_5 "https://www.stldnb.com/blog/category/jungle-old-school/"
+  site_root --> p3_5
+end
+
+classDef root fill:#f8fafc,stroke:#475569;
+classDef page fill:#ecfeff,stroke:#06b6d4;
