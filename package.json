@@ -1,0 +1,17 @@
+{
+  "name": "stldnb-sitemap-tools",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "@mermaid-js/mermaid-cli": "^11.6.0"
+  },
+  "scripts": {
+    "sitemap:build:mmd": "node --import tsx ./scripts/sitemap-to-mermaid.ts ./scripts/sitemap-combined.xml",
+    "sitemap:build:viewer": "node --import tsx ./scripts/build-sitemap-viewer.ts",
+    "sitemap:svg": "npx -y @mermaid-js/mermaid-cli -i ./dist/sitemap/index.mmd -o ./dist/sitemap/sitemap.svg",
+    "sitemap:all": "pnpm run sitemap:build:mmd && pnpm run sitemap:build:viewer && pnpm run sitemap:svg",
+
+    "sitemap:all:depth2": "node --import tsx ./scripts/sitemap-to-mermaid.ts ./scripts/sitemap-combined.xml --group-depth=2 && pnpm run sitemap:build:viewer && pnpm run sitemap:svg"
+  }
+}

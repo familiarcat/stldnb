@@ -1,0 +1,48 @@
+%%{init: {"securityLevel":"loose"}}%%
+flowchart TD
+  site_root["www.stldnb.com"]:::root
+  legend["Legend: solid = pages • dashed = image assets • click section to drill down"]:::legend
+  site_root --> legend
+  n_seg_root_93935f88["(root)"]:::section
+  site_root --> n_seg_root_93935f88
+  click n_seg_root_93935f88 "sections/root.html"
+  n_seg_artist_page_ce5456f0["artist-page"]:::section
+  site_root --> n_seg_artist_page_ce5456f0
+  click n_seg_artist_page_ce5456f0 "sections/artist-page.html"
+  n_seg_blog_cc04b70b["blog"]:::section
+  site_root --> n_seg_blog_cc04b70b
+  click n_seg_blog_cc04b70b "sections/blog.html"
+  n_seg_cart_45709fdd["cart"]:::section
+  site_root --> n_seg_cart_45709fdd
+  click n_seg_cart_45709fdd "sections/cart.html"
+  n_seg_checkout_ded27007["checkout"]:::section
+  site_root --> n_seg_checkout_ded27007
+  click n_seg_checkout_ded27007 "sections/checkout.html"
+  n_seg_contact_de334b3d["contact"]:::section
+  site_root --> n_seg_contact_de334b3d
+  click n_seg_contact_de334b3d "sections/contact.html"
+  n_seg_dj_4f3cb525["dj"]:::section
+  site_root --> n_seg_dj_4f3cb525
+  click n_seg_dj_4f3cb525 "sections/dj.html"
+  n_seg_events_ba2a4bce["events"]:::section
+  site_root --> n_seg_events_ba2a4bce
+  click n_seg_events_ba2a4bce "sections/events.html"
+  n_seg_labels_93fff7c0["labels"]:::section
+  site_root --> n_seg_labels_93fff7c0
+  click n_seg_labels_93fff7c0 "sections/labels.html"
+  n_seg_landing_ba724a1a["landing"]:::section
+  site_root --> n_seg_landing_ba724a1a
+  click n_seg_landing_ba724a1a "sections/landing.html"
+  n_seg_mix_upload_28fb3b87["mix-upload"]:::section
+  site_root --> n_seg_mix_upload_28fb3b87
+  click n_seg_mix_upload_28fb3b87 "sections/mix-upload.html"
+  n_seg_my_account_be799d0b["my-account"]:::section
+  site_root --> n_seg_my_account_be799d0b
+  click n_seg_my_account_be799d0b "sections/my-account.html"
+  n_seg_shop_5c75cd27["shop"]:::section
+  site_root --> n_seg_shop_5c75cd27
+  click n_seg_shop_5c75cd27 "sections/shop.html"
+
+  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;
+  classDef section font-weight:bold,stroke:#555,fill:#f3f3f3;
+  classDef legend stroke:#bbb,fill:#fff;

@@ -1,0 +1,24 @@
+%%{init: {"securityLevel":"loose"}}%%
+flowchart TD
+  section_root["www.stldnb.com / artist-page"]:::root
+  up_index["⬅ Back to Index"]:::nav
+  section_root --> up_index
+  click up_index "../index.html"
+  n_www_stldnb_com_artist_page_7bed98fc["artist page"]:::page
+  section_root --> n_www_stldnb_com_artist_page_7bed98fc
+  click n_www_stldnb_com_artist_page_7bed98fc "https://www.stldnb.com/artist-page/"
+  n_www_stldnb_com_artist_page_7bed98fc_img_1["image 1"]:::asset
+  n_www_stldnb_com_artist_page_7bed98fc --> n_www_stldnb_com_artist_page_7bed98fc_img_1
+  click n_www_stldnb_com_artist_page_7bed98fc_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_artist_page_7bed98fc_img_2["image 2"]:::asset
+  n_www_stldnb_com_artist_page_7bed98fc --> n_www_stldnb_com_artist_page_7bed98fc_img_2
+  click n_www_stldnb_com_artist_page_7bed98fc_img_2 "https://stldnb-us-east-1-wordpress-offload.s3.amazonaws.com/wp-content/uploads/2025/06/01161439/03-Concept-Vision-Segment-Mudslide-mp3-image-150x150.jpg"
+  n_www_stldnb_com_artist_page_7bed98fc_img_3["image 3"]:::asset
+  n_www_stldnb_com_artist_page_7bed98fc --> n_www_stldnb_com_artist_page_7bed98fc_img_3
+  click n_www_stldnb_com_artist_page_7bed98fc_img_3 "https://www.stldnb.com/wp-content/uploads/2025/04/f3732184-3830-4862-9fbf-bd0c5686845a-150x150.webp"
+
+  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;
+  classDef nav stroke:#333,fill:#fff;
+  classDef subsection font-weight:bold,stroke:#777,fill:#fafafa;
+  classDef page fill:#ffffff,stroke:#333,stroke-width:1px;
+  classDef asset fill:#f9f9f9,stroke:#999,stroke-dasharray:3 3;
