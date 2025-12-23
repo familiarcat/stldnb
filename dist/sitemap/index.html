@@ -2,72 +2,66 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>STLDNB Drillable Sitemap</title>
+  <title>STLDNB Sitemap Explorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-    header{padding:10px;border-bottom:1px solid #e5e7eb;background:#fff;position:sticky;top:0;z-index:10;}
+    header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 12px;}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-    button,a.btn{padding:8px 10px;border:1px solid #d1d5db;background:#fff;border-radius:8px;cursor:pointer;text-decoration:none;color:#111;}
-    #viewport{width:100vw;height:calc(100vh - 58px);overflow:hidden;background:#fafafa;}
-    #stage{transform-origin:0 0;}
+    button,a.btn,input,select{padding:8px 10px;border:1px solid #d1d5db;background:#fff;border-radius:10px;}
+    button{cursor:pointer;}
+    a.btn{text-decoration:none;color:#111;display:inline-block;}
     .hint{color:#6b7280;font-size:13px;}
+    #viewport{width:100vw;height:calc(100vh - 74px);overflow:hidden;background:#fafafa;}
+    #stage{transform-origin:0 0;}
+    #cy{width:100%;height:100%;}
+    .hidden{display:none!important;}
   </style>
 </head>
 <body>
-  <header>
-    <div class="row">
-      <button id="btnOverview">Overview</button>
-      <button id="btnFull">Full</button>
-      <a class="btn" href="sitemap.svg" target="_blank">SVG overview</a>
-      <a class="btn" href="unified.svg" target="_blank">SVG full</a>
-      <span class="hint">Drag to pan • Ctrl/Cmd+wheel to zoom • Double-click to reset</span>
-    </div>
-  </header>
-  <div id="viewport"><div id="stage"></div></div>
+<header>
+  <div class="row">
+    <button id="tabMermaid" aria-pressed="true">Mermaid</button>
+    <button id="tabThought" aria-pressed="false">Thought Map</button>
+    <button id="btnOverview">Mermaid overview</button>
+    <button id="btnFull">Mermaid full</button>
+    <a class="btn" href="sitemap.svg" target="_blank">SVG overview</a>
+    <a class="btn" href="unified.svg" target="_blank">SVG full</a>
+    <input id="q" placeholder="Search (thought map)…" style="min-width:240px" />
+    <select id="filter"><option value="all">All</option><option value="page">Pages</option><option value="image">Images</option><option value="section">Sections</option><option value="category">Categories</option><option value="date">Dates</option></select>
+    <span class="hint">Drag to pan • Ctrl/Cmd+wheel zoom (Mermaid) • Wheel zoom (Thought Map)</span>
+  </div>
+</header>
+  <div id="viewport">
+    <div id="stage"></div>
+    <div id="cy" class="hidden"></div>
+  </div>
 
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    import cytoscape from "https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.js";
+
     mermaid.initialize({ startOnLoad:false, securityLevel:'loose', flowchart:{ useMaxWidth:false } });
 
     const viewport = document.getElementById('viewport');
     const stage = document.getElementById('stage');
+    const cyEl = document.getElementById('cy');
+    const tabMermaid = document.getElementById('tabMermaid');
+    const tabThought = document.getElementById('tabThought');
+    const q = document.getElementById('q');
+    const filter = document.getElementById('filter');
+
+    // Mermaid pan/zoom
     let scale = 1, tx = 20, ty = 20;
     let isPanning = false, startX = 0, startY = 0;
-
     function apply(){ stage.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'; }
     function reset(){ scale = 1; tx = 20; ty = 20; apply(); }
     function clamp(s){ return Math.min(3, Math.max(0.2, s)); }
-
-    viewport.addEventListener('mousedown', (e)=>{
-      isPanning = true;
-      startX = e.clientX - tx;
-      startY = e.clientY - ty;
-      viewport.style.cursor = 'grabbing';
-    });
+    viewport.addEventListener('mousedown', (e)=>{ if(!cyEl.classList.contains('hidden')) return; isPanning=true; startX=e.clientX-tx; startY=e.clientY-ty; viewport.style.cursor='grabbing'; });
     window.addEventListener('mouseup', ()=>{ isPanning=false; viewport.style.cursor='default'; });
-    window.addEventListener('mousemove', (e)=>{
-      if(!isPanning) return;
-      tx = e.clientX - startX;
-      ty = e.clientY - startY;
-      apply();
-    });
-
-    viewport.addEventListener('wheel', (e)=>{
-      if(!(e.ctrlKey || e.metaKey)) return;
-      e.preventDefault();
-      const prev = scale;
-      const next = clamp(scale * (e.deltaY < 0 ? 1.1 : 0.9));
-      const rect = viewport.getBoundingClientRect();
-      const cx = e.clientX - rect.left;
-      const cy = e.clientY - rect.top;
-      tx = cx - (cx - tx) * (next / prev);
-      ty = cy - (cy - ty) * (next / prev);
-      scale = next;
-      apply();
-    }, { passive:false });
-
-    viewport.addEventListener('dblclick', reset);
+    window.addEventListener('mousemove', (e)=>{ if(!isPanning) return; tx=e.clientX-startX; ty=e.clientY-startY; apply(); });
+    viewport.addEventListener('wheel', (e)=>{ if(!cyEl.classList.contains('hidden')) return; if(!(e.ctrlKey||e.metaKey)) return; e.preventDefault(); const prev=scale; const next=clamp(scale*(e.deltaY<0?1.1:0.9)); const rect=viewport.getBoundingClientRect(); const cx=e.clientX-rect.left; const cy=e.clientY-rect.top; tx = cx - (cx - tx) * (next/prev); ty = cy - (cy - ty) * (next/prev); scale=next; apply(); }, {passive:false});
+    viewport.addEventListener('dblclick', ()=>{ if(!cyEl.classList.contains('hidden')) return; reset(); });
 
     async function renderMmd(file){
       const src = await fetch(file).then(r=>r.text());
@@ -78,8 +72,74 @@
       reset();
     }
 
+    // Thought map
+    let cy = null;
+    async function initThought(){
+      if(cy) return;
+      const data = await fetch('graph.json').then(r=>r.json());
+      const elements = [...data.nodes.map(n=>({ data:n.data })), ...data.edges.map(e=>({ data:e.data }))];
+      cy = cytoscape({
+        container: cyEl,
+        elements,
+        style: [
+          { selector: 'node', style: { 'label':'data(label)','font-size':10,'text-wrap':'wrap','text-max-width':100,'text-valign':'center','text-halign':'center','background-color':'#fff','border-width':1,'border-color':'#cbd5e1','shape':'round-rectangle','padding':'6px' } },
+          { selector: 'node[kind='site']', style: { 'font-size':12,'border-width':2,'border-color':'#475569','background-color':'#f8fafc' } },
+          { selector: 'node[kind='section']', style: { 'background-color':'#f1f5f9','border-color':'#64748b','font-weight':'bold' } },
+          { selector: 'node[kind='path']', style: { 'background-color':'#eef2ff','border-color':'#818cf8' } },
+          { selector: 'node[kind='page']', style: { 'background-color':'#ecfeff','border-color':'#06b6d4' } },
+          { selector: 'node[kind='image']', style: { 'background-color':'#fff7ed','border-color':'#fb923c','border-style':'dashed' } },
+          { selector: 'node[kind='image'][img]', style: { 'background-image':'data(img)','background-fit':'cover','background-opacity':0.35 } },
+          { selector: 'node[kind='category']', style: { 'background-color':'#f0fdf4','border-color':'#22c55e' } },
+          { selector: 'node[kind='date']', style: { 'background-color':'#fdf2f8','border-color':'#ec4899' } },
+          { selector: 'node[kind='type']', style: { 'background-color':'#fffbeb','border-color':'#f59e0b' } },
+          { selector: 'node[kind='asset_host']', style: { 'background-color':'#f8fafc','border-color':'#94a3b8','border-style':'dotted' } },
+          { selector: 'edge', style: { 'width':1,'line-color':'#94a3b8','curve-style':'bezier' } },
+          { selector: 'edge[kind='asset']', style: { 'line-style':'dashed','line-color':'#fb923c' } },
+          { selector: 'edge[kind='related']', style: { 'line-color':'#a78bfa','line-style':'dotted' } },
+          { selector: 'edge[kind='member']', style: { 'line-color':'#64748b','line-style':'dashed' } }
+        ],
+        layout: { name: 'cose', animate: true, randomize: true, fit: true, padding: 40 }
+      });
+      cy.on('tap', 'node', (evt)=>{ const n=evt.target; const url=n.data('url'); if(url) window.open(url,'_blank'); });
+    }
+
+    function setTab(which){
+      const showThought = which === 'thought';
+      cyEl.classList.toggle('hidden', !showThought);
+      stage.classList.toggle('hidden', showThought);
+      tabMermaid.setAttribute('aria-pressed', String(!showThought));
+      tabThought.setAttribute('aria-pressed', String(showThought));
+      if(showThought) initThought();
+    }
+
+    function applyFilter(){
+      if(!cy) return;
+      const term=(q.value||'').toLowerCase().trim();
+      const kind=filter.value;
+      cy.batch(()=>{
+        cy.nodes().forEach(n=>{
+          const k=n.data('kind');
+          const label=(n.data('label')||'').toLowerCase();
+          const okKind=(kind==='all')||(k===kind);
+          const okTerm=(!term)||label.includes(term);
+          n.style('display',(okKind&&okTerm)?'element':'none');
+        });
+        cy.edges().forEach(e=>{
+          const s=e.source(), t=e.target();
+          e.style('display',(s.style('display')!=='none'&&t.style('display')!=='none')?'element':'none');
+        });
+      });
+      cy.layout({ name:'cose', animate:true, fit:true, padding:40 }).run();
+    }
+
+    tabMermaid.addEventListener('click', ()=>setTab('mermaid'));
+    tabThought.addEventListener('click', ()=>setTab('thought'));
     document.getElementById('btnOverview').addEventListener('click', ()=>renderMmd('index.mmd'));
     document.getElementById('btnFull').addEventListener('click', ()=>renderMmd('unified.mmd'));
+    q.addEventListener('input', applyFilter);
+    filter.addEventListener('change', applyFilter);
+
+    setTab('mermaid');
     renderMmd('index.mmd');
   </script>
 </body>
