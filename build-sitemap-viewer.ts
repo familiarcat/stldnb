@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Build dist/sitemap/index.html viewer (debug-hardened).
- * - Explicitly shows errors on-screen (try/catch everywhere)
- * - Shows a status line (so "blank page" can't happen silently)
- * - Vendors Cytoscape from node_modules into dist/sitemap/vendor/
+ * Build dist/sitemap/index.html viewer (Mermaid + Thought Map).
+ * Thought Map adds:
+ *  - "Display: Source" -> breadthfirst left-to-right, minimal overlap
+ *  - "Display: Features" -> choose a level-2 root (section) and focus that subtree
+ *
+ * Cytoscape is vendored from node_modules into dist/sitemap/vendor/
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -45,12 +47,14 @@ const html = `<!doctype html>
     button{cursor:pointer;}
     a.btn{text-decoration:none;color:#111;display:inline-block;}
     .hint{color:#6b7280;font-size:13px;}
-    #viewport{width:100vw;height:calc(100vh - 102px);overflow:hidden;background:#fafafa;}
+    #viewport{width:100vw;height:calc(100vh - 140px);overflow:hidden;background:#fafafa;}
     #stage{transform-origin:0 0;}
     #cy{width:100%;height:100%;}
     .hidden{display:none!important;}
-    #statusbar{border-top:1px solid #e5e7eb;background:#fff;padding:6px 12px;font-size:12px;color:#374151;}
+    #statusbar{border-top:1px solid #e5e7eb;background:#fff;padding:8px 12px;font-size:12px;color:#374151;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
     #statusbar code{background:#f3f4f6;padding:1px 4px;border-radius:6px;}
+    .group{display:flex;gap:8px;align-items:center;}
+    label{color:#6b7280;font-size:12px;}
   </style>
 </head>
 <body>
@@ -72,7 +76,32 @@ const html = `<!doctype html>
 </div>
 
 <div id="statusbar">
-  Status: <span id="status">booting…</span>
+  <div class="group">
+    <label>Thought Map display</label>
+    <select id="thoughtDisplay">
+      <option value="source">Source (left→right)</option>
+      <option value="features">Features (focus subtree)</option>
+    </select>
+  </div>
+
+  <div class="group">
+    <label>Features root</label>
+    <select id="featuresRoot"></select>
+  </div>
+
+  <div class="group">
+    <label>Depth</label>
+    <select id="featuresDepth">
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+
+  <div class="group">
+    Status: <span id="status">booting…</span>
+  </div>
 </div>
 
 <script type="module">
@@ -81,10 +110,9 @@ const html = `<!doctype html>
 
   // Error overlay
   const err = document.createElement("pre");
-  err.style.cssText = "position:fixed;left:12px;bottom:54px;max-width:85vw;max-height:45vh;overflow:auto;background:#111;color:#fff;padding:10px;border-radius:10px;opacity:.95;z-index:9999;display:none;white-space:pre-wrap;";
+  err.style.cssText = "position:fixed;left:12px;bottom:86px;max-width:85vw;max-height:45vh;overflow:auto;background:#111;color:#fff;padding:10px;border-radius:10px;opacity:.95;z-index:9999;display:none;white-space:pre-wrap;";
   document.body.appendChild(err);
   const showErr = (m) => { err.textContent = String(m); err.style.display = "block"; setStatus("error (see overlay)"); };
-
   window.addEventListener("error", (e) => showErr(e.message || e.error));
   window.addEventListener("unhandledrejection", (e) => showErr(e.reason));
 
@@ -93,6 +121,10 @@ const html = `<!doctype html>
   const cyEl = document.getElementById("cy");
   const tabMermaid = document.getElementById("tabMermaid");
   const tabThought = document.getElementById("tabThought");
+
+  const thoughtDisplaySel = document.getElementById("thoughtDisplay");
+  const featuresRootSel = document.getElementById("featuresRoot");
+  const featuresDepthSel = document.getElementById("featuresDepth");
 
   // Mermaid pan/zoom
   let scale = 1, tx = 20, ty = 20, panning = false, sx = 0, sy = 0;
@@ -128,9 +160,7 @@ const html = `<!doctype html>
   async function fetchText(file) {
     const res = await fetch(file, { cache: "no-store" });
     const text = await res.text();
-    if (!res.ok) {
-      throw new Error("Fetch failed " + res.status + " for " + file + "\\n\\n" + text.slice(0, 200));
-    }
+    if (!res.ok) throw new Error("Fetch failed " + res.status + " for " + file + "\\n\\n" + text.slice(0, 200));
     return text;
   }
 
@@ -145,13 +175,15 @@ const html = `<!doctype html>
       stage.innerHTML = out.svg;
       stage.querySelectorAll("a").forEach(a => a.setAttribute("target", "_blank"));
       reset();
-      setStatus("rendered " + file + " (" + src.length + " chars)");
+      setStatus("rendered " + file);
     } catch (e) {
       showErr("Mermaid render failed for " + file + "\\n\\n" + e);
     }
   }
 
+  // --- Thought Map ---
   let cy = null;
+  let graphData = null;
 
   async function loadCytoscape() {
     try {
@@ -163,13 +195,127 @@ const html = `<!doctype html>
         "https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.js",
         "https://esm.sh/cytoscape@3.30.2"
       ];
-      for (const u of urls) {
-        try {
-          const mod = await import(u);
-          return mod.default || mod;
-        } catch {}
-      }
+      for (const u of urls) { try { const mod = await import(u); return mod.default || mod; } catch {} }
       throw e1;
+    }
+  }
+
+  function layoutSource(rootId) {
+    if (!cy) return;
+    setStatus("layout: source");
+    cy.layout({
+      name: "breadthfirst",
+      directed: true,
+      spacingFactor: 1.35,
+      animate: true,
+      fit: true,
+      padding: 60,
+      roots: rootId ? "#" + cssEscape(rootId) : undefined
+    }).run();
+  }
+
+  function layoutFeatures(rootId, depth) {
+    if (!cy) return;
+    setStatus("layout: features");
+    // Show only nodes within N hops from root along member/asset edges
+    const keep = bfsKeep(rootId, depth);
+    cy.elements().addClass("dim");
+    cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
+    cy.edges().forEach(e => {
+      const ok = keep.has(e.source().id()) && keep.has(e.target().id());
+      if (ok) e.removeClass("dim"); else e.addClass("dim");
+    });
+
+    // Layout subtree more compactly
+    cy.layout({
+      name: "breadthfirst",
+      directed: true,
+      spacingFactor: 1.25,
+      animate: true,
+      fit: true,
+      padding: 80,
+      roots: "#" + cssEscape(rootId)
+    }).run();
+    // Fit only visible-ish nodes
+    const visible = cy.nodes().filter(n => !n.hasClass("dim"));
+    if (visible.length) cy.fit(visible, 80);
+  }
+
+  // BFS over outgoing edges (member/asset) to depth N
+  function bfsKeep(rootId, depth) {
+    const keep = new Set([rootId]);
+    let frontier = [rootId];
+    for (let d = 0; d < depth; d++) {
+      const next = [];
+      for (const id of frontier) {
+        const n = cy.getElementById(id);
+        n.outgoers("edge").forEach(e => {
+          const k = e.data("kind");
+          if (k && k !== "member" && k !== "asset" && k !== "related") return;
+          const t = e.target().id();
+          if (!keep.has(t)) { keep.add(t); next.push(t); }
+        });
+      }
+      frontier = next;
+      if (!frontier.length) break;
+    }
+    return keep;
+  }
+
+  // Safe CSS id selector
+  function cssEscape(id) {
+    return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, "\\\\$&");
+  }
+
+  function populateFeatureRoots() {
+    // "Level 2" = nodes directly connected from the site node by member edges, and kind==='section' if present.
+    const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
+    if (!site) return;
+
+    const candidates = new Map();
+    site.outgoers("edge").targets().forEach(n => {
+      const kind = n.data("kind") || "";
+      if (kind === "section" || kind === "path" || kind === "page") {
+        candidates.set(n.id(), n.data("label") || n.id());
+      }
+    });
+
+    // If your graph.json doesn't tag kinds well, fall back to "top 25 highest degree" nodes besides site
+    if (candidates.size === 0) {
+      cy.nodes().filter(n => n.id() !== site.id()).sort((a,b) => b.degree() - a.degree()).slice(0, 25).forEach(n => {
+        candidates.set(n.id(), n.data("label") || n.id());
+      });
+    }
+
+    featuresRootSel.innerHTML = "";
+    Array.from(candidates.entries()).sort((a,b) => String(a[1]).localeCompare(String(b[1]))).forEach(([id,label]) => {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = label;
+      featuresRootSel.appendChild(opt);
+    });
+
+    // default to first candidate
+    if (featuresRootSel.options.length) {
+      featuresRootSel.value = featuresRootSel.options[0].value;
+    }
+  }
+
+  function applyThoughtDisplay() {
+    if (!cy) return;
+    // Remove dim
+    cy.elements().removeClass("dim");
+
+    const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
+    const siteId = site ? site.id() : null;
+
+    const mode = thoughtDisplaySel.value;
+    if (mode === "source") {
+      layoutSource(siteId);
+    } else {
+      const root = featuresRootSel.value || siteId;
+      const depth = Number(featuresDepthSel.value || "3");
+      if (root) layoutFeatures(root, depth);
     }
   }
 
@@ -178,15 +324,14 @@ const html = `<!doctype html>
     try {
       setStatus("loading cytoscape…");
       const cytoscape = await loadCytoscape();
+
       setStatus("loading graph.json…");
-      const dataRes = await fetch("graph.json", { cache: "no-store" });
-      const dataText = await dataRes.text();
-      if (!dataRes.ok) throw new Error("Fetch failed " + dataRes.status + " for graph.json\\n\\n" + dataText.slice(0,200));
-      const data = JSON.parse(dataText);
+      const txt = await fetchText("graph.json");
+      graphData = JSON.parse(txt);
 
       const elements = []
-        .concat((data.nodes||[]).map(n => ({ data: n.data })))
-        .concat((data.edges||[]).map(e => ({ data: e.data })));
+        .concat((graphData.nodes||[]).map(n => ({ data: n.data })))
+        .concat((graphData.edges||[]).map(e => ({ data: e.data })));
 
       cy = cytoscape({
         container: cyEl,
@@ -200,9 +345,10 @@ const html = `<!doctype html>
           { selector: "node[kind='image']", style: { "background-color":"#fff7ed","border-color":"#fb923c","border-style":"dashed" } },
           { selector: "node[kind='image'][img]", style: { "background-image":"data(img)","background-fit":"cover","background-opacity":0.35 } },
           { selector: "edge", style: { "width":1,"line-color":"#94a3b8","curve-style":"bezier" } },
-          { selector: "edge[kind='asset']", style: { "line-style":"dashed","line-color":"#fb923c" } }
+          { selector: "edge[kind='asset']", style: { "line-style":"dashed","line-color":"#fb923c" } },
+          { selector: ".dim", style: { "opacity":0.12 } }
         ],
-        layout: { name: "cose", animate: true, randomize: true, fit: true, padding: 40 }
+        wheelSensitivity: 0.22
       });
 
       cy.on("tap", "node", (evt) => {
@@ -210,7 +356,10 @@ const html = `<!doctype html>
         if (url) window.open(url, "_blank");
       });
 
-      setStatus("thought map ready (" + elements.length + " elements)");
+      populateFeatureRoots();
+      applyThoughtDisplay();
+
+      setStatus("thought map ready");
     } catch (e) {
       showErr("Thought map init failed\\n\\n" + e);
     }
@@ -230,6 +379,11 @@ const html = `<!doctype html>
   document.getElementById("btnOverview").onclick = () => renderMmd("index.mmd");
   document.getElementById("btnFull").onclick = () => renderMmd("unified.mmd");
 
+  thoughtDisplaySel.addEventListener("change", applyThoughtDisplay);
+  featuresRootSel.addEventListener("change", applyThoughtDisplay);
+  featuresDepthSel.addEventListener("change", applyThoughtDisplay);
+
+  // Boot
   setTab("mermaid");
   renderMmd("index.mmd");
 </script>
@@ -237,4 +391,4 @@ const html = `<!doctype html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
-console.log("✅ Wrote dist/sitemap/index.html (debug-hardened)");
+console.log("✅ Wrote dist/sitemap/index.html (thought map layouts)");
