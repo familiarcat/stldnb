@@ -1,0 +1,24 @@
+%%{init: {"securityLevel":"loose"}}%%
+flowchart TD
+  section_root["www.stldnb.com / (root)"]:::root
+  up_index["⬅ Back to Index"]:::nav
+  section_root --> up_index
+  click up_index "../index.html"
+  n_www_stldnb_com_6c166b9a["Home"]:::page
+  section_root --> n_www_stldnb_com_6c166b9a
+  click n_www_stldnb_com_6c166b9a "https://www.stldnb.com/"
+  n_www_stldnb_com_6c166b9a_img_1["image 1"]:::asset
+  n_www_stldnb_com_6c166b9a --> n_www_stldnb_com_6c166b9a_img_1
+  click n_www_stldnb_com_6c166b9a_img_1 "https://www.stldnb.com/wp-content/plugins/elementor/assets/images/placeholder.png"
+  n_www_stldnb_com_6c166b9a_img_2["image 2"]:::asset
+  n_www_stldnb_com_6c166b9a --> n_www_stldnb_com_6c166b9a_img_2
+  click n_www_stldnb_com_6c166b9a_img_2 "https://www.stldnb.com/wp-content/uploads/2025/04/d40e7f38-fb4d-4836-93b2-722d2a346146.webp"
+  n_www_stldnb_com_6c166b9a_img_3["image 3"]:::asset
+  n_www_stldnb_com_6c166b9a --> n_www_stldnb_com_6c166b9a_img_3
+  click n_www_stldnb_com_6c166b9a_img_3 "https://www.stldnb.com/wp-content/uploads/2025/04/a99a46e1-74de-413d-928f-5d5d08a865a4.webp"
+
+  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;
+  classDef nav stroke:#333,fill:#fff;
+  classDef subsection font-weight:bold,stroke:#777,fill:#fafafa;
+  classDef page fill:#ffffff,stroke:#333,stroke-width:1px;
+  classDef asset fill:#f9f9f9,stroke:#999,stroke-dasharray:3 3;

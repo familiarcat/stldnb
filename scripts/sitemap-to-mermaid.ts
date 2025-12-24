@@ -1,296 +1,287 @@
 #!/usr/bin/env node
+/**
+ * Generate drillable Mermaid + graph.json from a combined sitemap XML.
+ *
+ * Run:
+ *   node --import tsx ./scripts/sitemap-to-mermaid.ts ./scripts/sitemap-combined.xml
+ *
+ * Adds (Dec 2025):
+ *  - Exclude "category" taxonomy placeholder nodes from ALL outputs (Mermaid + graph.json).
+ *    By default excludes URLs containing '/category/' (and '/product-category/').
+ *    Override with:
+ *      --exclude=/category/,/product-category/
+ */
 import fs from "node:fs";
 import path from "node:path";
 
 type Entry = { loc: string; images: string[] };
-type Node = { data: { id: string; label: string; kind: string; url?: string; img?: string; section?: string } };
-type Edge = { data: { id: string; source: string; target: string; kind: string } };
 
-const inputFile = process.argv[2] ?? "./sitemap-combined.xml";
+const inputFile = process.argv[2] ?? "./scripts/sitemap-combined.xml";
 const OUT_DIR = "./dist/sitemap";
+const SECTIONS_DIR = path.join(OUT_DIR, "sections");
 
-// Mermaid controls
-const MAX_IMAGES_MERMAID = 1;
-const MAX_PAGES_PER_SECTION_OVERVIEW = 80;
-const WEB_DEPTH_OVERVIEW = 2;
+const MAX_IMAGES = getInt("--max-images", 3);
+const GROUP_DEPTH = Math.max(1, getInt("--group-depth", 1)); // for index grouping
+const SECTION_DEPTH = Math.max(1, getInt("--section-depth", 3)); // depth inside section
 
-// Cytoscape controls
-const MAX_RELATED_EDGES_PER_PAGE = 6;
+// Exclude patterns (comma-separated substrings). Defaults remove taxonomy category placeholders.
+const EXCLUDE = getList("--exclude", ["/category/", "/product-category/"]);
 
-function ensureDir(p: string) { fs.mkdirSync(p, { recursive: true }); }
-function mmdEscape(s: string) {
-  return s.replace(/\r?\n|\r/g, " ").replace(/\s+/g, " ").replace(/"/g, "'").replace(/\[/g, "(").replace(/\]/g, ")").trim();
+function getInt(flag: string, def: number): number {
+  const p = process.argv.find((a) => a.startsWith(flag + "="));
+  if (!p) return def;
+  const v = Number(p.split("=").slice(1).join("="));
+  return Number.isFinite(v) ? v : def;
 }
-function clickUrlEscape(u: string) { return u.replace(/"/g, "%22").replace(/\r?\n|\r/g, ""); }
-function titleFromUrl(u: string) {
-  try {
-    const url = new URL(u);
-    const p = url.pathname.replace(/\/+$/, "");
-    if (!p) return "Home";
-    const parts = p.split("/").filter(Boolean);
-    const last = parts.at(-1) ?? "Page";
-    return decodeURIComponent(last).replace(/-/g, " ");
-  } catch { return u; }
+function getList(flag: string, def: string[]): string[] {
+  const p = process.argv.find((a) => a.startsWith(flag + "="));
+  if (!p) return def;
+  const raw = p.split("=").slice(1).join("=").trim();
+  if (!raw) return def;
+  return raw.split(",").map(s => s.trim()).filter(Boolean);
 }
-function parts(u: string): string[] { try { return new URL(u).pathname.split("/").filter(Boolean); } catch { return []; } }
-function topKey(u: string): string { const p = parts(u); return p[0] ?? "(root)"; }
-function hostOf(u: string): string | null { try { return new URL(u).host; } catch { return null; } }
+
+function ensureDir(p: string) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
 function hash8(s: string): string {
   let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
   return (h >>> 0).toString(16).slice(0, 8);
 }
+
 function safeId(s: string): string {
-  const base = "n_" + s.replace(/^https?:\/\//, "").replace(/[^a-zA-Z0-9_]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+  const base =
+    "n_" +
+    s
+      .replace(/^https?:\/\//, "")
+      .replace(/[^a-zA-Z0-9_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
   return `${base}_${hash8(s)}`;
 }
 
-// Parse XML
+function mmdEscape(s: string): string {
+  return s
+    .replace(/\r?\n|\r/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/"/g, "'")
+    .replace(/\[/g, "(")
+    .replace(/\]/g, ")")
+    .trim();
+}
+
+function clickUrlEscape(u: string): string {
+  return u.replace(/"/g, "%22").replace(/\r?\n|\r/g, "");
+}
+
+function titleFromUrl(u: string): string {
+  try {
+    const url = new URL(u);
+    const pathn = url.pathname.replace(/\/+$/, "");
+    if (!pathn || pathn === "") return "Home";
+    const parts = pathn.split("/").filter(Boolean);
+    const last = parts.at(-1) ?? "Page";
+    return decodeURIComponent(last).replace(/-/g, " ");
+  } catch {
+    return u;
+  }
+}
+
+function pathParts(u: string): string[] {
+  try {
+    return new URL(u).pathname.split("/").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function groupKey(u: string, depth: number): string {
+  const parts = pathParts(u);
+  if (parts.length === 0) return "(root)";
+  return parts.slice(0, Math.min(depth, parts.length)).join("/");
+}
+
+function sectionSlug(key: string): string {
+  return (
+    key
+      .toLowerCase()
+      .replace(/[^a-z0-9\/_-]/g, "")
+      .replace(/\//g, "__")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "") || "root"
+  );
+}
+
+function isExcludedUrl(u: string): boolean {
+  // Exclude patterns by substring match
+  const uu = String(u || "");
+  if (!uu) return true;
+  return EXCLUDE.some((pat) => pat && uu.includes(pat));
+}
+
+// --- Parse XML tolerantly ---
 const xml = fs.readFileSync(inputFile, "utf8");
 const urlBlocks = xml.match(/<url>[\s\S]*?<\/url>/g) ?? [];
-function extractLoc(block: string): string { return (block.match(/<loc>([\s\S]*?)<\/loc>/)?.[1] ?? "").trim(); }
-function extractImages(block: string): string[] {
-  const cdata = Array.from(block.matchAll(/<image:loc>\s*<!\[CDATA\[(.*?)\]\]>\s*<\/image:loc>/g)).map(m => m[1].trim());
-  const plain = Array.from(block.matchAll(/<image:loc>\s*([^<\s][\s\S]*?)\s*<\/image:loc>/g))
-    .map(m => m[1].trim()).filter(u => u && !u.startsWith("<![CDATA["));
-  const all = [...cdata, ...plain].filter(Boolean);
-  const seen = new Set<string>(); const out: string[] = [];
-  for (const u of all) if (!seen.has(u)) { seen.add(u); out.push(u); }
-  return out;
+
+function extractLoc(block: string): string {
+  return (block.match(/<loc>([\s\S]*?)<\/loc>/)?.[1] ?? "").trim();
 }
 
-let entries: Entry[] = urlBlocks.map(b => ({ loc: extractLoc(b), images: extractImages(b) })).filter(e => !!e.loc);
-if (entries.length === 0) { console.error("No <url><loc> entries found."); process.exit(1); }
+function extractImages(block: string): string[] {
+  const cdata = Array.from(
+    block.matchAll(/<image:loc>\s*<!\[CDATA\[(.*?)\]\]>\s*<\/image:loc>/g)
+  ).map((m) => m[1].trim());
 
-const siteHost = (() => { try { return new URL(entries[0].loc).host; } catch { return "site"; } })();
+  const plain = Array.from(
+    block.matchAll(/<image:loc>\s*([^<\s][\s\S]*?)\s*<\/image:loc>/g)
+  )
+    .map((m) => m[1].trim())
+    .filter((u) => u && !u.startsWith("<![CDATA["));
+
+  const all = [...cdata, ...plain].filter(Boolean);
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const u of all) {
+    if (!seen.has(u)) {
+      seen.add(u);
+      deduped.push(u);
+    }
+  }
+  return deduped;
+}
+
+let entries: Entry[] = urlBlocks
+  .map((b) => ({ loc: extractLoc(b), images: extractImages(b) }))
+  .filter((e) => !!e.loc)
+  .filter((e) => !isExcludedUrl(e.loc)); // <-- category removal
+
+// Determine site host
+const siteHost = (() => {
+  try {
+    return new URL(entries[0]?.loc ?? "https://example.com").host;
+  } catch {
+    return "site";
+  }
+})();
+
+// Group entries for index
+const groups = new Map<string, Entry[]>();
+for (const e of entries) {
+  const key = groupKey(e.loc, GROUP_DEPTH);
+  groups.set(key, [...(groups.get(key) ?? []), e]);
+}
+const sortedGroupKeys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+
 ensureDir(OUT_DIR);
+ensureDir(SECTIONS_DIR);
 
-// assets.json
+// Write assets map
 const assetsMap: Record<string, string[]> = {};
 for (const e of entries) assetsMap[e.loc] = e.images;
-fs.writeFileSync(path.join(OUT_DIR, "assets.json"), JSON.stringify(assetsMap, null, 2), "utf8");
+fs.writeFileSync(path.join(OUT_DIR, "assets.json"), JSON.stringify(assetsMap, null, 2));
 
-// Group by section
-const bySection = new Map<string, Entry[]>();
-for (const e of entries) { const k = topKey(e.loc); bySection.set(k, [...(bySection.get(k) ?? []), e]); }
-const sectionKeys = Array.from(bySection.keys()).sort((a, b) => a.localeCompare(b));
+// --- Build INDEX Mermaid ---
+let index = "";
+index += `%%{init: {"securityLevel":"loose"}}%%\n`;
+index += `flowchart TD\n`;
+const rootId = "site_root";
+index += `  ${rootId}["${mmdEscape(siteHost)}"]:::root\n`;
+index += `  legend["Legend: solid = pages • dashed = image assets • click section to drill down"]:::legend\n`;
+index += `  ${rootId} --> legend\n`;
 
-// graph.json with semantic nodes/edges
-const nodes: Node[] = [];
-const edges: Edge[] = [];
-const nodeSeen = new Set<string>();
-const edgeSeen = new Set<string>();
-function addNode(n: Node) { if (nodeSeen.has(n.data.id)) return; nodeSeen.add(n.data.id); nodes.push(n); }
-function addEdge(source: string, target: string, kind: string) {
-  const key = `${kind}|${source}|${target}`;
-  if (edgeSeen.has(key)) return;
-  edgeSeen.add(key);
-  edges.push({ data: { id: `e_${kind}_${hash8(source)}_${hash8(target)}`, source, target, kind } });
+for (const key of sortedGroupKeys) {
+  const segId = safeId(`seg_${key}`);
+  const slug = sectionSlug(key);
+  index += `  ${segId}["${mmdEscape(key)}"]:::section\n`;
+  index += `  ${rootId} --> ${segId}\n`;
+  index += `  click ${segId} "sections/${slug}.html"\n`;
 }
 
-const siteId = "site_root";
-addNode({ data: { id: siteId, label: siteHost, kind: "site", url: `https://${siteHost}` } });
+index += `\n`;
+index += `  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;\n`;
+index += `  classDef section font-weight:bold,stroke:#555,fill:#f3f3f3;\n`;
+index += `  classDef legend stroke:#bbb,fill:#fff;\n`;
 
-const typeNodeId = new Map<string, string>();
-const categoryNodeId = new Map<string, string>();
-const dateNodeId = new Map<string, string>();
-const assetHostNodeId = new Map<string, string>();
+fs.writeFileSync(path.join(OUT_DIR, "index.mmd"), index);
 
-function ensureGroupNode(map: Map<string, string>, key: string, label: string, kind: string): string {
-  const existing = map.get(key);
-  if (existing) return existing;
-  const id = safeId(`${kind}_${key}`);
-  map.set(key, id);
-  addNode({ data: { id, label, kind } });
-  return id;
-}
+// --- Build SECTION graphs ---
+for (const key of sortedGroupKeys) {
+  const slug = sectionSlug(key);
+  const list = (groups.get(key) ?? []).slice().sort((a, b) => a.loc.localeCompare(b.loc));
 
-for (const k of sectionKeys) {
-  const sid = safeId(`section_${k}`);
-  addNode({ data: { id: sid, label: k, kind: "section" } });
-  addEdge(siteId, sid, "contains");
+  const sectionRootId = "section_root";
+  let mmd = "";
+  mmd += `%%{init: {"securityLevel":"loose"}}%%\n`;
+  mmd += `flowchart TD\n`;
+  mmd += `  ${sectionRootId}["${mmdEscape(siteHost)} / ${mmdEscape(key)}"]:::root\n`;
 
-  const list = (bySection.get(k) ?? []).slice().sort((a, b) => a.loc.localeCompare(b.loc));
-  const pathNode = new Map<string, string>();
-  const ensurePath = (pkey: string, label: string) => {
-    const ex = pathNode.get(pkey);
-    if (ex) return ex;
-    const pid = safeId(`path_${k}_${pkey}`);
-    pathNode.set(pkey, pid);
-    addNode({ data: { id: pid, label, kind: "path", section: k } });
-    return pid;
-  };
+  const upId = "up_index";
+  mmd += `  ${upId}["⬅ Back to Index"]:::nav\n`;
+  mmd += `  ${sectionRootId} --> ${upId}\n`;
+  mmd += `  click ${upId} "../index.html"\n`;
+
+  const pathNodeId = new Map<string, string>();
+  function ensurePathNode(parts: string[]) {
+    const pk = parts.join("/");
+    if (pathNodeId.has(pk)) return pathNodeId.get(pk)!;
+    const nid = safeId(`path_${key}_${pk}`);
+    pathNodeId.set(pk, nid);
+    const label = parts.at(-1) ?? pk;
+    if (parts.length === 1) {
+      mmd += `  ${nid}["${mmdEscape(label)}"]:::subsection\n`;
+      mmd += `  ${sectionRootId} --> ${nid}\n`;
+    } else {
+      const parentKey = parts.slice(0, -1).join("/");
+      const parentId = pathNodeId.get(parentKey) ?? sectionRootId;
+      mmd += `  ${nid}["${mmdEscape(label)}"]:::subsection\n`;
+      mmd += `  ${parentId} --> ${nid}\n`;
+    }
+    return nid;
+  }
 
   for (const e of list) {
-    const ps = parts(e.loc);
-    const rel = (k === "(root)") ? ps : ps.slice(1);
-    let parent = sid;
+    // category URLs already excluded globally; keep guard anyway
+    if (isExcludedUrl(e.loc)) continue;
 
-    for (let i = 0; i < rel.length; i++) {
-      const chain = rel.slice(0, i + 1);
-      const pkey = chain.join("/");
-      const pid = ensurePath(pkey, chain.at(-1) ?? pkey);
-      const parentKey = chain.slice(0, -1).join("/");
-      const parentId = (i === 0) ? sid : (pathNode.get(parentKey) ?? sid);
-      addEdge(parentId, pid, "contains");
-      parent = pid;
+    const parts = pathParts(e.loc);
+    const sectionParts = key === "(root)" ? parts : parts.slice(GROUP_DEPTH);
+    const depthParts = sectionParts.slice(0, Math.min(SECTION_DEPTH, sectionParts.length));
+    let parent = sectionRootId;
+
+    if (depthParts.length > 0) {
+      for (let i = 0; i < depthParts.length; i++) {
+        const chain = depthParts.slice(0, i + 1);
+        const node = ensurePathNode(chain);
+        parent = node;
+      }
     }
 
-    const pageId = safeId(`page_${e.loc}`);
-    addNode({ data: { id: pageId, label: titleFromUrl(e.loc), kind: "page", url: e.loc, section: k } });
-    addEdge(parent, pageId, "page");
+    const pageId = safeId(e.loc);
+    mmd += `  ${pageId}["${mmdEscape(titleFromUrl(e.loc))}"]:::page\n`;
+    mmd += `  ${parent} --> ${pageId}\n`;
+    mmd += `  click ${pageId} "${clickUrlEscape(e.loc)}"\n`;
 
-    // type membership
-    const typeId = ensureGroupNode(typeNodeId, `type:${k}`, `type: ${k}`, "type");
-    addEdge(typeId, pageId, "member");
-
-    // category membership
-    const catIdx = rel.findIndex(seg => seg === "category");
-    const cat = (catIdx >= 0 && rel[catIdx + 1]) ? rel[catIdx + 1] : null;
-    if (cat) {
-      const cid = ensureGroupNode(categoryNodeId, `cat:${cat.toLowerCase()}`, `category: ${cat}`, "category");
-      addEdge(cid, pageId, "member");
-    }
-
-    // date membership: /YYYY/MM/
-    const year = rel[0] && /^\d{4}$/.test(rel[0]) ? rel[0] : null;
-    const month = year && rel[1] && /^\d{2}$/.test(rel[1]) ? rel[1] : null;
-    if (year && month) {
-      const did = ensureGroupNode(dateNodeId, `date:${year}/${month}`, `date: ${year}/${month}`, "date");
-      addEdge(did, pageId, "member");
-    }
-
-    // images + asset host membership
-    const imgHosts = new Set<string>();
-    e.images.forEach((img, idx) => {
-      const imgId = safeId(`img_${e.loc}_${idx}_${img}`);
-      addNode({ data: { id: imgId, label: `img ${idx + 1}`, kind: "image", url: img, img, section: k } });
-      addEdge(pageId, imgId, "asset");
-      const h = hostOf(img);
-      if (h) imgHosts.add(h);
+    e.images.slice(0, MAX_IMAGES).forEach((img, idx) => {
+      const imgId = `${pageId}_img_${idx + 1}`;
+      mmd += `  ${imgId}["${mmdEscape(`image ${idx + 1}`)}"]:::asset\n`;
+      mmd += `  ${pageId} --> ${imgId}\n`;
+      mmd += `  click ${imgId} "${clickUrlEscape(img)}"\n`;
     });
-    for (const h of imgHosts) {
-      const hid = ensureGroupNode(assetHostNodeId, `assethost:${h}`, `asset host: ${h}`, "asset_host");
-      addEdge(hid, pageId, "related");
-    }
-  }
-}
-
-// Add "web" related edges among pages that share group membership, but keep it bounded
-const pages = nodes.filter(n => n.data.kind === "page").map(n => n.data.id);
-const pageSet = new Set(pages);
-const groupToPages = new Map<string, string[]>();
-for (const e of edges) {
-  if (e.data.kind !== "member") continue;
-  const group = e.data.source;
-  const member = e.data.target;
-  if (!pageSet.has(member)) continue;
-  groupToPages.set(group, [...(groupToPages.get(group) ?? []), member]);
-}
-
-const relatedCount = new Map<string, number>();
-const canAddRel = (pid: string) => (relatedCount.get(pid) ?? 0) < MAX_RELATED_EDGES_PER_PAGE;
-const incRel = (pid: string) => relatedCount.set(pid, (relatedCount.get(pid) ?? 0) + 1);
-
-for (const [, members] of groupToPages.entries()) {
-  if (members.length < 2) continue;
-  const ms = members.slice().sort();
-  for (let i = 0; i < ms.length - 1; i++) {
-    const a = ms[i], b = ms[i + 1];
-    if (!canAddRel(a) || !canAddRel(b)) continue;
-    addEdge(a, b, "related");
-    incRel(a); incRel(b);
-  }
-}
-
-fs.writeFileSync(path.join(OUT_DIR, "graph.json"), JSON.stringify({ nodes, edges }, null, 2), "utf8");
-
-// Mermaid web-style (clustered)
-function buildWebMermaid(full: boolean): string {
-  let mmd = "";
-  mmd += `%%{init: {"securityLevel":"loose","flowchart":{"useMaxWidth":false}}}%%\n`;
-  mmd += `flowchart TB\n`;
-  mmd += `  ${siteId}["${mmdEscape(siteHost)}"]:::site\n`;
-
-  const lanes = ["lane1","lane2","lane3","lane4"];
-  for (const lid of lanes) {
-    mmd += `  subgraph ${lid}[" "]\n    direction TB\n  end\n`;
-  }
-
-  sectionKeys.forEach((k, i) => {
-    const sid = safeId(`section_${k}`);
-    mmd += `  ${sid}["${mmdEscape(k)}"]:::section\n`;
-    mmd += `  ${lanes[i % 4]} --> ${sid}\n`;
-    mmd += `  ${siteId} --> ${sid}\n`;
-  });
-
-  for (const k of sectionKeys) {
-    const sid = safeId(`section_${k}`);
-    const list = (bySection.get(k) ?? []).slice().sort((a, b) => a.loc.localeCompare(b.loc));
-    const cap = full ? list : list.slice(0, MAX_PAGES_PER_SECTION_OVERVIEW);
-    const subId = safeId(`subgraph_${k}`);
-
-    mmd += `\n  subgraph ${subId}["${mmdEscape(k)} cluster"]\n    direction TB\n`;
-
-    const pmap = new Map<string,string>();
-    const ensureP = (chain: string[]) => {
-      const key = chain.join("/");
-      const ex = pmap.get(key);
-      if (ex) return ex;
-      const nid = safeId(`m_path_${k}_${key}`);
-      pmap.set(key, nid);
-      mmd += `    ${nid}["${mmdEscape(chain.at(-1) ?? key)}"]:::path\n`;
-      return nid;
-    };
-
-    for (const e of cap) {
-      const ps = parts(e.loc);
-      const rel = (k === "(root)") ? ps : ps.slice(1);
-      let parent = sid;
-
-      const depth = full ? rel.length : Math.min(WEB_DEPTH_OVERVIEW, rel.length);
-      for (let i = 0; i < depth; i++) {
-        const chain = rel.slice(0, i + 1);
-        const pid = ensureP(chain);
-        const parentId = (i === 0) ? sid : (pmap.get(rel.slice(0, i).join("/")) ?? sid);
-        mmd += `    ${parentId} --> ${pid}\n`;
-        parent = pid;
-      }
-
-      const pageId = safeId(`m_page_${e.loc}`);
-      mmd += `    ${pageId}["${mmdEscape(titleFromUrl(e.loc))}"]:::page\n`;
-      mmd += `    ${parent} --> ${pageId}\n`;
-      mmd += `    click ${pageId} "${clickUrlEscape(e.loc)}"\n`;
-
-      const img = e.images[0];
-      if (img && MAX_IMAGES_MERMAID > 0) {
-        const imgId = safeId(`m_img_${e.loc}_${img}`);
-        mmd += `    ${imgId}["img"]:::asset\n`;
-        mmd += `    ${pageId} -.-> ${imgId}\n`;
-        mmd += `    click ${imgId} "${clickUrlEscape(img)}"\n`;
-      }
-    }
-
-    if (!full && list.length > MAX_PAGES_PER_SECTION_OVERVIEW) {
-      const moreId = safeId(`more_${k}`);
-      mmd += `    ${moreId}["… +${list.length - MAX_PAGES_PER_SECTION_OVERVIEW} more"]:::more\n`;
-      mmd += `    ${sid} --> ${moreId}\n`;
-    }
-
-    mmd += `  end\n  ${sid} --> ${subId}\n`;
   }
 
   mmd += `\n`;
-  mmd += `  classDef site fill:#f8fafc,stroke:#475569,color:#0f172a,stroke-width:2px;\n`;
-  mmd += `  classDef section fill:#f1f5f9,stroke:#64748b,color:#0f172a;\n`;
-  mmd += `  classDef path fill:#eef2ff,stroke:#818cf8,color:#111827;\n`;
-  mmd += `  classDef page fill:#ecfeff,stroke:#06b6d4,color:#0f172a;\n`;
-  mmd += `  classDef asset fill:#fff7ed,stroke:#fb923c,color:#7c2d12,stroke-dasharray:3 3;\n`;
-  mmd += `  classDef more fill:#ffffff,stroke:#cbd5e1,color:#334155,stroke-dasharray:2 2;\n`;
-  return mmd;
+  mmd += `  classDef root font-weight:bold,stroke-width:2px,stroke:#333,fill:#ffffff;\n`;
+  mmd += `  classDef nav stroke:#333,fill:#fff;\n`;
+  mmd += `  classDef subsection font-weight:bold,stroke:#777,fill:#fafafa;\n`;
+  mmd += `  classDef page fill:#ffffff,stroke:#333,stroke-width:1px;\n`;
+  mmd += `  classDef asset fill:#f9f9f9,stroke:#999,stroke-dasharray:3 3;\n`;
+
+  fs.writeFileSync(path.join(SECTIONS_DIR, `${slug}.mmd`), mmd);
 }
 
-fs.writeFileSync(path.join(OUT_DIR, "index.mmd"), buildWebMermaid(false), "utf8");
-fs.writeFileSync(path.join(OUT_DIR, "unified.mmd"), buildWebMermaid(true), "utf8");
-
-console.log(`✅ Wrote: ${OUT_DIR}/index.mmd, ${OUT_DIR}/unified.mmd, ${OUT_DIR}/graph.json, ${OUT_DIR}/assets.json`);
+console.log(`✅ Wrote: ${OUT_DIR}/index.mmd and ${SECTIONS_DIR}/*.mmd and ${OUT_DIR}/assets.json (excluded: ${EXCLUDE.join(", ")})`);
