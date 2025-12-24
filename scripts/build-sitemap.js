@@ -90,7 +90,9 @@ if (exists(viewerTs)) {
 }
 
 // 4) Sanitize MMD for SVG output
-const PLACEHOLDER_LABEL_RE = /^(type:\s|date:\s|asset host:\s)/i;
+// Placeholder grouping nodes we keep in the data model but hide from visual outputs.
+// (These are structural helpers, not actual content nodes.)
+const PLACEHOLDER_LABEL_RE = /^(type:\s|date:\s|asset host:\s|category:\s)/i;
 
 function sanitizeMermaidSource(src) {
   const lines = src.split(/\r?\n/);

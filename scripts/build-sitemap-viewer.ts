@@ -85,6 +85,13 @@ const html = `<!doctype html>
         <option value="6">6</option>
       </select>
     </div>
+
+    <div class="group" id="focusOnlyWrap">
+      <label style="display:flex;gap:6px;align-items:center;">
+        <input id="focusOnly" type="checkbox" checked />
+        Hide non-subtree
+      </label>
+    </div>
   </div>
 </header>
 
@@ -102,7 +109,7 @@ const html = `<!doctype html>
   const setStatus = (t) => { statusEl.textContent = t; };
   const thoughtControls = document.getElementById("thoughtControls");
 
-  const PLACEHOLDER_LABEL_RE = /^(type:\\s|date:\\s|asset host:\\s)/i;
+  const PLACEHOLDER_LABEL_RE = /^(type:\\s|date:\\s|asset host:\\s|category:\\s)/i;
 
   // Error overlay
   const err = document.createElement("pre");
@@ -121,6 +128,8 @@ const html = `<!doctype html>
   const thoughtDisplaySel = document.getElementById("thoughtDisplay");
   const featuresRootSel = document.getElementById("featuresRoot");
   const featuresDepthSel = document.getElementById("featuresDepth");
+  const focusOnlyChk = document.getElementById("focusOnly");
+  const focusOnlyWrap = document.getElementById("focusOnlyWrap");
 
   // Mermaid pan/zoom
   let scale = 1, tx = 20, ty = 20, panning = false, sx = 0, sy = 0;
@@ -230,7 +239,8 @@ const html = `<!doctype html>
   function layoutSource(rootId) {
     if (!cy) return;
     setStatus("layout: source");
-    cy.elements().removeClass("dim");
+    // Show the full graph (no filtering).
+    cy.elements().removeClass("dim").removeClass("hiddenEl");
     cy.batch(() => {
       cy.nodes().forEach(n => { n.data("size", 54); n.data("fsize", 10); });
     });
@@ -315,12 +325,27 @@ const html = `<!doctype html>
 
     const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
 
-    cy.elements().addClass("dim");
-    cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
-    cy.edges().forEach(e => {
-      const ok = keep.has(e.source().id()) && keep.has(e.target().id());
-      if (ok) e.removeClass("dim"); else e.addClass("dim");
-    });
+    // Two modes:
+    // - Focus-only: hide everything outside the chosen subtree.
+    // - Context: keep the full graph but dim everything outside the subtree.
+    const focusOnly = !!(focusOnlyChk && focusOnlyChk.checked);
+    cy.elements().removeClass("dim").removeClass("hiddenEl");
+
+    if (focusOnly) {
+      const keepEls = cy.elements().filter(el => {
+        if (el.isNode()) return keep.has(el.id());
+        // edges: keep only if both endpoints are in keep
+        return keep.has(el.source().id()) && keep.has(el.target().id());
+      });
+      cy.elements().not(keepEls).addClass("hiddenEl");
+    } else {
+      cy.elements().addClass("dim");
+      cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
+      cy.edges().forEach(e => {
+        const ok = keep.has(e.source().id()) && keep.has(e.target().id());
+        if (ok) e.removeClass("dim"); else e.addClass("dim");
+      });
+    }
 
     applyDepthScaling(keep, depthMap, rootId);
 
@@ -368,6 +393,8 @@ const html = `<!doctype html>
     const siteId = site ? site.id() : null;
 
     const mode = thoughtDisplaySel.value;
+    // Only show the focus-only toggle in Features mode.
+    if (focusOnlyWrap) focusOnlyWrap.style.display = mode === "features" ? "" : "none";
     if (mode === "source") {
       layoutSource(siteId);
     } else {
@@ -426,7 +453,8 @@ const html = `<!doctype html>
           { selector: "node[kind='image'][img]", style: { "background-image":"data(img)","background-fit":"cover","background-opacity":0.35 } },
           { selector: "edge", style: { "width":1,"line-color":"#94a3b8","curve-style":"bezier" } },
           { selector: "edge[kind='asset']", style: { "line-style":"dashed","line-color":"#fb923c" } },
-          { selector: ".dim", style: { "opacity":0.10 } }
+          { selector: ".dim", style: { "opacity":0.10 } },
+          { selector: ".hiddenEl", style: { "display":"none" } }
         ],
         wheelSensitivity: 0.22
       });
@@ -467,6 +495,7 @@ const html = `<!doctype html>
   thoughtDisplaySel.addEventListener("change", applyThoughtDisplay);
   featuresRootSel.addEventListener("change", applyThoughtDisplay);
   featuresDepthSel.addEventListener("change", applyThoughtDisplay);
+  focusOnlyChk.addEventListener("change", applyThoughtDisplay);
 
   setTab("mermaid");
   renderMmd("index.mmd");
