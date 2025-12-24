@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
  * Build dist/sitemap/index.html viewer (Mermaid + Thought Map).
- * Thought Map adds:
- *  - "Display: Source" -> breadthfirst left-to-right, minimal overlap
- *  - "Display: Features" -> choose a level-2 root (section) and focus that subtree
+ *
+ * Fixes:
+ *  - Features mode now expands and highlights ALL connected descendants of the selected feature root
+ *    (traverses edges UNDIRECTED to avoid directionality issues in graph.json).
+ *  - Thought Map controls moved directly below nav and only shown when Thought Map tab is active.
  *
  * Cytoscape is vendored from node_modules into dist/sitemap/vendor/
  */
@@ -33,6 +35,7 @@ if (!copied) {
   console.warn("⚠️  Could not vendor cytoscape. Run npm install so node_modules/cytoscape exists.");
 }
 
+// NOTE: Template literal. Do NOT include unescaped backticks inside.
 const html = `<!doctype html>
 <html>
 <head>
@@ -47,7 +50,9 @@ const html = `<!doctype html>
     button{cursor:pointer;}
     a.btn{text-decoration:none;color:#111;display:inline-block;}
     .hint{color:#6b7280;font-size:13px;}
-    #viewport{width:100vw;height:calc(100vh - 140px);overflow:hidden;background:#fafafa;}
+    #thoughtControls{border-top:1px solid #eef2f7;margin-top:10px;padding-top:10px;}
+    #thoughtControls.hidden{display:none!important;}
+    #viewport{width:100vw;height:calc(100vh - 124px);overflow:hidden;background:#fafafa;}
     #stage{transform-origin:0 0;}
     #cy{width:100%;height:100%;}
     .hidden{display:none!important;}
@@ -68,6 +73,34 @@ const html = `<!doctype html>
     <a class="btn" href="unified.svg" target="_blank">SVG full</a>
     <span class="hint">Drag to pan • Ctrl/Cmd+wheel zoom (Mermaid) • Wheel zoom (Thought Map)</span>
   </div>
+
+  <!-- Thought map controls live directly below nav and only show when Thought Map tab is active -->
+  <div id="thoughtControls" class="row hidden" aria-hidden="true">
+    <div class="group">
+      <label>Thought Map display</label>
+      <select id="thoughtDisplay">
+        <option value="source">Source (left→right)</option>
+        <option value="features">Features (focus subtree)</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label>Features root</label>
+      <select id="featuresRoot"></select>
+    </div>
+
+    <div class="group">
+      <label>Depth</label>
+      <select id="featuresDepth">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
+    </div>
+  </div>
 </header>
 
 <div id="viewport">
@@ -77,29 +110,6 @@ const html = `<!doctype html>
 
 <div id="statusbar">
   <div class="group">
-    <label>Thought Map display</label>
-    <select id="thoughtDisplay">
-      <option value="source">Source (left→right)</option>
-      <option value="features">Features (focus subtree)</option>
-    </select>
-  </div>
-
-  <div class="group">
-    <label>Features root</label>
-    <select id="featuresRoot"></select>
-  </div>
-
-  <div class="group">
-    <label>Depth</label>
-    <select id="featuresDepth">
-      <option value="2">2</option>
-      <option value="3" selected>3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-    </select>
-  </div>
-
-  <div class="group">
     Status: <span id="status">booting…</span>
   </div>
 </div>
@@ -108,9 +118,11 @@ const html = `<!doctype html>
   const statusEl = document.getElementById("status");
   const setStatus = (t) => { statusEl.textContent = t; };
 
+  const thoughtControls = document.getElementById("thoughtControls");
+
   // Error overlay
   const err = document.createElement("pre");
-  err.style.cssText = "position:fixed;left:12px;bottom:86px;max-width:85vw;max-height:45vh;overflow:auto;background:#111;color:#fff;padding:10px;border-radius:10px;opacity:.95;z-index:9999;display:none;white-space:pre-wrap;";
+  err.style.cssText = "position:fixed;left:12px;bottom:54px;max-width:85vw;max-height:45vh;overflow:auto;background:#111;color:#fff;padding:10px;border-radius:10px;opacity:.95;z-index:9999;display:none;white-space:pre-wrap;";
   document.body.appendChild(err);
   const showErr = (m) => { err.textContent = String(m); err.style.display = "block"; setStatus("error (see overlay)"); };
   window.addEventListener("error", (e) => showErr(e.message || e.error));
@@ -183,7 +195,6 @@ const html = `<!doctype html>
 
   // --- Thought Map ---
   let cy = null;
-  let graphData = null;
 
   async function loadCytoscape() {
     try {
@@ -200,60 +211,42 @@ const html = `<!doctype html>
     }
   }
 
+  function cssEscape(id) {
+    return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, "\\\\$&");
+  }
+
   function layoutSource(rootId) {
     if (!cy) return;
     setStatus("layout: source");
+    cy.elements().removeClass("dim");
     cy.layout({
       name: "breadthfirst",
       directed: true,
-      spacingFactor: 1.35,
+      spacingFactor: 1.45,
       animate: true,
       fit: true,
-      padding: 60,
+      padding: 70,
+      orientation: "horizontal",
       roots: rootId ? "#" + cssEscape(rootId) : undefined
     }).run();
   }
 
-  function layoutFeatures(rootId, depth) {
-    if (!cy) return;
-    setStatus("layout: features");
-    // Show only nodes within N hops from root along member/asset edges
-    const keep = bfsKeep(rootId, depth);
-    cy.elements().addClass("dim");
-    cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
-    cy.edges().forEach(e => {
-      const ok = keep.has(e.source().id()) && keep.has(e.target().id());
-      if (ok) e.removeClass("dim"); else e.addClass("dim");
-    });
-
-    // Layout subtree more compactly
-    cy.layout({
-      name: "breadthfirst",
-      directed: true,
-      spacingFactor: 1.25,
-      animate: true,
-      fit: true,
-      padding: 80,
-      roots: "#" + cssEscape(rootId)
-    }).run();
-    // Fit only visible-ish nodes
-    const visible = cy.nodes().filter(n => !n.hasClass("dim"));
-    if (visible.length) cy.fit(visible, 80);
-  }
-
-  // BFS over outgoing edges (member/asset) to depth N
-  function bfsKeep(rootId, depth) {
+  // UNDIRECTED BFS: traverse connected edges regardless of direction and kind
+  function bfsKeepUndirected(rootId, depth) {
     const keep = new Set([rootId]);
     let frontier = [rootId];
     for (let d = 0; d < depth; d++) {
       const next = [];
       for (const id of frontier) {
         const n = cy.getElementById(id);
-        n.outgoers("edge").forEach(e => {
-          const k = e.data("kind");
-          if (k && k !== "member" && k !== "asset" && k !== "related") return;
+        n.connectedEdges().forEach(e => {
+          const s = e.source().id();
           const t = e.target().id();
-          if (!keep.has(t)) { keep.add(t); next.push(t); }
+          const other = (s === id) ? t : s;
+          if (!keep.has(other)) {
+            keep.add(other);
+            next.push(other);
+          }
         });
       }
       frontier = next;
@@ -262,29 +255,49 @@ const html = `<!doctype html>
     return keep;
   }
 
-  // Safe CSS id selector
-  function cssEscape(id) {
-    return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, "\\\\$&");
+  function layoutFeatures(rootId, depth) {
+    if (!cy) return;
+    setStatus("layout: features");
+
+    const keep = bfsKeepUndirected(rootId, depth);
+
+    // Dim everything, then undim keep set + edges between kept nodes
+    cy.elements().addClass("dim");
+    cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
+
+    cy.edges().forEach(e => {
+      const ok = keep.has(e.source().id()) && keep.has(e.target().id());
+      if (ok) e.removeClass("dim"); else e.addClass("dim");
+    });
+
+    const keptNodes = cy.nodes().filter(n => keep.has(n.id()));
+    cy.layout({
+      name: "breadthfirst",
+      directed: true,
+      spacingFactor: 1.35,
+      animate: true,
+      fit: true,
+      padding: 90,
+      orientation: "horizontal",
+      roots: "#" + cssEscape(rootId)
+    }).run();
+
+    if (keptNodes.length) cy.fit(keptNodes, 90);
   }
 
   function populateFeatureRoots() {
-    // "Level 2" = nodes directly connected from the site node by member edges, and kind==='section' if present.
     const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
     if (!site) return;
 
     const candidates = new Map();
-    site.outgoers("edge").targets().forEach(n => {
+    const direct = site.connectedEdges().connectedNodes().filter(n => n.id() !== site.id());
+    direct.forEach(n => {
       const kind = n.data("kind") || "";
-      if (kind === "section" || kind === "path" || kind === "page") {
-        candidates.set(n.id(), n.data("label") || n.id());
-      }
+      const label = n.data("label") || n.id();
+      if (kind === "section") candidates.set(n.id(), label);
     });
-
-    // If your graph.json doesn't tag kinds well, fall back to "top 25 highest degree" nodes besides site
     if (candidates.size === 0) {
-      cy.nodes().filter(n => n.id() !== site.id()).sort((a,b) => b.degree() - a.degree()).slice(0, 25).forEach(n => {
-        candidates.set(n.id(), n.data("label") || n.id());
-      });
+      direct.forEach(n => candidates.set(n.id(), n.data("label") || n.id()));
     }
 
     featuresRootSel.innerHTML = "";
@@ -295,17 +308,11 @@ const html = `<!doctype html>
       featuresRootSel.appendChild(opt);
     });
 
-    // default to first candidate
-    if (featuresRootSel.options.length) {
-      featuresRootSel.value = featuresRootSel.options[0].value;
-    }
+    if (featuresRootSel.options.length) featuresRootSel.value = featuresRootSel.options[0].value;
   }
 
   function applyThoughtDisplay() {
     if (!cy) return;
-    // Remove dim
-    cy.elements().removeClass("dim");
-
     const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
     const siteId = site ? site.id() : null;
 
@@ -327,17 +334,17 @@ const html = `<!doctype html>
 
       setStatus("loading graph.json…");
       const txt = await fetchText("graph.json");
-      graphData = JSON.parse(txt);
+      const data = JSON.parse(txt);
 
       const elements = []
-        .concat((graphData.nodes||[]).map(n => ({ data: n.data })))
-        .concat((graphData.edges||[]).map(e => ({ data: e.data })));
+        .concat((data.nodes||[]).map(n => ({ data: n.data })))
+        .concat((data.edges||[]).map(e => ({ data: e.data })));
 
       cy = cytoscape({
         container: cyEl,
         elements,
         style: [
-          { selector: "node", style: { "label":"data(label)","font-size":10,"text-wrap":"wrap","text-max-width":100,"text-valign":"center","text-halign":"center","background-color":"#fff","border-width":1,"border-color":"#cbd5e1","shape":"round-rectangle","padding":"6px" } },
+          { selector: "node", style: { "label":"data(label)","font-size":10,"text-wrap":"wrap","text-max-width":110,"text-valign":"center","text-halign":"center","background-color":"#fff","border-width":1,"border-color":"#cbd5e1","shape":"round-rectangle","padding":"6px" } },
           { selector: "node[kind='site']", style: { "font-size":12,"border-width":2,"border-color":"#475569","background-color":"#f8fafc" } },
           { selector: "node[kind='section']", style: { "background-color":"#f1f5f9","border-color":"#64748b","font-weight":"bold" } },
           { selector: "node[kind='path']", style: { "background-color":"#eef2ff","border-color":"#818cf8" } },
@@ -346,7 +353,7 @@ const html = `<!doctype html>
           { selector: "node[kind='image'][img]", style: { "background-image":"data(img)","background-fit":"cover","background-opacity":0.35 } },
           { selector: "edge", style: { "width":1,"line-color":"#94a3b8","curve-style":"bezier" } },
           { selector: "edge[kind='asset']", style: { "line-style":"dashed","line-color":"#fb923c" } },
-          { selector: ".dim", style: { "opacity":0.12 } }
+          { selector: ".dim", style: { "opacity":0.10 } }
         ],
         wheelSensitivity: 0.22
       });
@@ -358,7 +365,6 @@ const html = `<!doctype html>
 
       populateFeatureRoots();
       applyThoughtDisplay();
-
       setStatus("thought map ready");
     } catch (e) {
       showErr("Thought map init failed\\n\\n" + e);
@@ -369,8 +375,14 @@ const html = `<!doctype html>
     const thought = which === "thought";
     cyEl.classList.toggle("hidden", !thought);
     stage.classList.toggle("hidden", thought);
+
     tabMermaid.setAttribute("aria-pressed", String(!thought));
     tabThought.setAttribute("aria-pressed", String(thought));
+
+    // Toggle thought controls visibility
+    thoughtControls.classList.toggle("hidden", !thought);
+    thoughtControls.setAttribute("aria-hidden", String(!thought));
+
     if (thought) initThought();
   }
 
@@ -391,4 +403,4 @@ const html = `<!doctype html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
-console.log("✅ Wrote dist/sitemap/index.html (thought map layouts)");
+console.log("✅ Wrote dist/sitemap/index.html (features subtree expansion + controls toggle)");
