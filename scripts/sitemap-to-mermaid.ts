@@ -24,8 +24,8 @@ const MAX_IMAGES = getInt("--max-images", 3);
 const GROUP_DEPTH = Math.max(1, getInt("--group-depth", 1)); // for index grouping
 const SECTION_DEPTH = Math.max(1, getInt("--section-depth", 3)); // depth inside section
 
-// Exclude patterns (comma-separated substrings). Defaults remove taxonomy category placeholders.
-const EXCLUDE = getList("--exclude", ["/category/", "/product-category/"]);
+// Exclude patterns (comma-separated substrings). Empty by default - include all URLs.
+const EXCLUDE = getList("--exclude", []);
 
 function getInt(flag: string, def: number): number {
   const p = process.argv.find((a) => a.startsWith(flag + "="));
@@ -284,4 +284,295 @@ for (const key of sortedGroupKeys) {
   fs.writeFileSync(path.join(SECTIONS_DIR, `${slug}.mmd`), mmd);
 }
 
-console.log(`✅ Wrote: ${OUT_DIR}/index.mmd and ${SECTIONS_DIR}/*.mmd and ${OUT_DIR}/assets.json (excluded: ${EXCLUDE.join(", ")})`);
+// =============================================================================
+// GRAPH.JSON GENERATION (Rich semantic graph for Thought Map)
+// =============================================================================
+
+type NodeKind =
+  | 'site'        // Root site node
+  | 'section'     // URL path sections (blog, shop, etc.)
+  | 'category'    // WordPress categories
+  | 'date'        // Date grouping (YYYY/MM)
+  | 'page'        // Individual pages/posts
+  | 'image'       // Asset images
+  | 'type'        // Page type grouping (hidden placeholder)
+  | 'asset_host'; // Asset CDN host (hidden placeholder)
+
+interface NodeData {
+  id: string;
+  label: string;
+  kind: NodeKind;
+  url?: string;
+  img?: string;
+  section?: string;
+  category?: string;
+  date?: string;
+  postType?: string;
+}
+
+type EdgeKind = 'contains' | 'page' | 'member' | 'asset' | 'related';
+
+interface EdgeData {
+  id: string;
+  source: string;
+  target: string;
+  kind: EdgeKind;
+}
+
+interface Graph {
+  nodes: Array<{ data: NodeData }>;
+  edges: Array<{ data: EdgeData }>;
+}
+
+interface PageMetadata {
+  category?: string;
+  date?: string;
+  dateYear?: string;
+  dateMonth?: string;
+  postType: string;
+  postSlug?: string;
+}
+
+function extractMetadata(url: string): PageMetadata {
+  // Extract from URL path patterns
+  const categoryMatch = url.match(/\/category\/([^\/]+)\/?/);
+  const dateMatch = url.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
+  const postMatch = url.match(/\/blog\/\d{4}\/\d{2}\/\d{2}\/([^\/]+)\/?/);
+
+  // Extract post type from URL structure
+  let postType = 'page';
+  if (url.includes('/blog/')) postType = 'post';
+  if (url.includes('/product/')) postType = 'product';
+  if (url.includes('/events/')) postType = 'event';
+  if (url.includes('/shop/')) postType = 'product';
+
+  return {
+    category: categoryMatch?.[1]?.replace(/-/g, ' '),
+    date: dateMatch ? `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}` : undefined,
+    dateYear: dateMatch?.[1],
+    dateMonth: dateMatch?.[2],
+    postType,
+    postSlug: postMatch?.[1]
+  };
+}
+
+const nodes: Array<{ data: NodeData }> = [];
+const edges: Array<{ data: EdgeData }> = [];
+const nodeIds = new Set<string>();
+
+function addNode(data: NodeData) {
+  if (!nodeIds.has(data.id)) {
+    nodes.push({ data });
+    nodeIds.add(data.id);
+  }
+}
+
+function addEdge(source: string, target: string, kind: EdgeKind) {
+  const id = `e_${kind}_${hash8(source)}_${hash8(target)}`;
+  edges.push({ data: { id, source, target, kind } });
+}
+
+// 1. Create site root
+addNode({
+  id: 'site',
+  label: siteHost,
+  kind: 'site',
+  url: `https://${siteHost}`
+});
+
+// 2. Create section nodes
+for (const key of sortedGroupKeys) {
+  const sectionId = `sec_${safeId(key)}`;
+  addNode({
+    id: sectionId,
+    label: key,
+    kind: 'section'
+  });
+  addEdge('site', sectionId, 'contains');
+}
+
+// 3. Collect unique categories, dates, asset hosts
+const categories = new Set<string>();
+const dates = new Set<string>();
+const assetHosts = new Set<string>();
+
+for (const e of entries) {
+  const metadata = extractMetadata(e.loc);
+
+  if (metadata.category) {
+    categories.add(metadata.category);
+  }
+
+  if (metadata.dateYear && metadata.dateMonth) {
+    const dateKey = `${metadata.dateYear}/${metadata.dateMonth}`;
+    dates.add(dateKey);
+  }
+
+  for (const img of e.images) {
+    try {
+      const imgHost = new URL(img).host;
+      if (imgHost !== siteHost) {
+        assetHosts.add(imgHost);
+      }
+    } catch {}
+  }
+}
+
+// 4. Create grouping dimension nodes
+for (const key of sortedGroupKeys) {
+  const typeId = `type_${safeId(key)}`;
+  addNode({
+    id: typeId,
+    label: `type: ${key}`,
+    kind: 'type'
+  });
+}
+
+for (const cat of Array.from(categories).sort()) {
+  const catId = `cat_${safeId(cat)}`;
+  addNode({
+    id: catId,
+    label: `category: ${cat}`,
+    kind: 'category'
+  });
+}
+
+for (const dateKey of Array.from(dates).sort()) {
+  const dateId = `date_${safeId(dateKey)}`;
+  addNode({
+    id: dateId,
+    label: `date: ${dateKey}`,
+    kind: 'date'
+  });
+}
+
+for (const host of Array.from(assetHosts).sort()) {
+  const hostId = `assethost_${safeId(host)}`;
+  addNode({
+    id: hostId,
+    label: `asset host: ${host}`,
+    kind: 'asset_host'
+  });
+}
+
+// 5. Create page and image nodes with metadata
+for (const e of entries) {
+  const metadata = extractMetadata(e.loc);
+  const section = groupKey(e.loc, GROUP_DEPTH);
+  const pageId = safeId(e.loc);
+
+  // Page node with metadata
+  addNode({
+    id: pageId,
+    label: titleFromUrl(e.loc),
+    kind: 'page',
+    url: e.loc,
+    section,
+    category: metadata.category,
+    date: metadata.date,
+    postType: metadata.postType
+  });
+
+  // Connect page to section
+  const sectionId = `sec_${safeId(section)}`;
+  addEdge(sectionId, pageId, 'page');
+
+  // Connect page to type
+  const typeId = `type_${safeId(section)}`;
+  addEdge(typeId, pageId, 'member');
+
+  // Connect page to category (if exists)
+  if (metadata.category) {
+    const catId = `cat_${safeId(metadata.category)}`;
+    addEdge(catId, pageId, 'member');
+  }
+
+  // Connect page to date (if exists)
+  if (metadata.dateYear && metadata.dateMonth) {
+    const dateKey = `${metadata.dateYear}/${metadata.dateMonth}`;
+    const dateId = `date_${safeId(dateKey)}`;
+    addEdge(dateId, pageId, 'member');
+  }
+
+  // Image nodes
+  for (const [idx, img] of e.images.slice(0, MAX_IMAGES).entries()) {
+    const imgId = `${pageId}_img_${idx + 1}`;
+    addNode({
+      id: imgId,
+      label: `img ${idx + 1}`,
+      kind: 'image',
+      url: img,
+      img: img,
+      section
+    });
+    addEdge(pageId, imgId, 'asset');
+
+    // Connect to asset host if external
+    try {
+      const imgHost = new URL(img).host;
+      if (imgHost !== siteHost) {
+        const hostId = `assethost_${safeId(imgHost)}`;
+        addEdge(hostId, pageId, 'related');
+      }
+    } catch {}
+  }
+}
+
+// Write graph.json
+const graph: Graph = { nodes, edges };
+fs.writeFileSync(
+  path.join(OUT_DIR, "graph.json"),
+  JSON.stringify(graph, null, 2)
+);
+
+// =============================================================================
+// UNIFIED.MMD GENERATION (Full site Mermaid diagram)
+// =============================================================================
+
+let unified = "";
+unified += `%%{init: {"securityLevel":"loose"}}%%\n`;
+unified += `flowchart TB\n`;
+unified += `  site_root["${mmdEscape(siteHost)}"]:::site\n\n`;
+
+// Add sections
+for (const key of sortedGroupKeys) {
+  const segId = safeId(`seg_${key}`);
+  unified += `  subgraph cluster_${segId} ["${mmdEscape(key)} cluster"]\n`;
+  unified += `    ${segId}_anchor[" "]:::anchor\n`;
+  unified += `  end\n`;
+  unified += `  site_root --> ${segId}_anchor\n\n`;
+}
+
+// Add pages to sections (limited to avoid massive diagram)
+for (const key of sortedGroupKeys) {
+  const list = (groups.get(key) ?? []).slice(0, 10); // Limit to 10 pages per section
+  const segId = safeId(`seg_${key}`);
+
+  for (const e of list) {
+    const pageId = safeId(e.loc);
+    unified += `  ${pageId}["${mmdEscape(titleFromUrl(e.loc))}"]:::page\n`;
+    unified += `  ${segId}_anchor --> ${pageId}\n`;
+    unified += `  click ${pageId} "${clickUrlEscape(e.loc)}"\n`;
+
+    // Add first image only
+    if (e.images.length > 0) {
+      const imgId = `${pageId}_img_1`;
+      unified += `  ${imgId}["img 1"]:::image\n`;
+      unified += `  ${pageId} -.-> ${imgId}\n`;
+      unified += `  click ${imgId} "${clickUrlEscape(e.images[0])}"\n`;
+    }
+  }
+  unified += `\n`;
+}
+
+unified += `  classDef site font-size:14px,stroke-width:2px,stroke:#475569,fill:#f8fafc;\n`;
+unified += `  classDef section font-weight:bold,stroke:#64748b,fill:#f1f5f9;\n`;
+unified += `  classDef anchor opacity:0;\n`;
+unified += `  classDef page stroke:#06b6d4,fill:#ecfeff;\n`;
+unified += `  classDef image stroke:#fb923c,fill:#fff7ed,stroke-dasharray:3 3;\n`;
+
+fs.writeFileSync(path.join(OUT_DIR, "unified.mmd"), unified);
+
+console.log(`✅ Wrote: ${OUT_DIR}/index.mmd, ${OUT_DIR}/unified.mmd, ${SECTIONS_DIR}/*.mmd, ${OUT_DIR}/graph.json, ${OUT_DIR}/assets.json`);
+console.log(`   Graph stats: ${nodes.length} nodes, ${edges.length} edges`);
+console.log(`   Excluded patterns: ${EXCLUDE.join(", ")}`);

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(npm run sitemap:build:*)",
+      "Bash(curl:*)",
+      "Bash(bash:*)"
+    ]
+  }
+}

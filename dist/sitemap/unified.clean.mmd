@@ -1,314 +1,198 @@
-%%{init: {"securityLevel":"loose","flowchart":{"useMaxWidth":false}}}%%
+%%{init: {"securityLevel":"loose"}}%%
 flowchart TB
   site_root["www.stldnb.com"]:::site
-  subgraph lane1[" "]
-    direction TB
-  end
-  subgraph lane2[" "]
-    direction TB
-  end
-  subgraph lane3[" "]
-    direction TB
-  end
-  subgraph lane4[" "]
-    direction TB
-  end
-  n_section_root_b3e1b12["(root)"]:::section
-  lane1 --> n_section_root_b3e1b12
-  site_root --> n_section_root_b3e1b12
-  n_section_artist_page_da1d7e9e["artist-page"]:::section
-  lane2 --> n_section_artist_page_da1d7e9e
-  site_root --> n_section_artist_page_da1d7e9e
-  n_section_blog_846dce0d["blog"]:::section
-  lane3 --> n_section_blog_846dce0d
-  site_root --> n_section_blog_846dce0d
-  n_section_cart_452e0cdb["cart"]:::section
-  lane4 --> n_section_cart_452e0cdb
-  site_root --> n_section_cart_452e0cdb
-  n_section_checkout_b329368d["checkout"]:::section
-  lane1 --> n_section_checkout_b329368d
-  site_root --> n_section_checkout_b329368d
-  n_section_contact_9290a5ff["contact"]:::section
-  lane2 --> n_section_contact_9290a5ff
-  site_root --> n_section_contact_9290a5ff
-  n_section_dj_87baeca7["dj"]:::section
-  lane3 --> n_section_dj_87baeca7
-  site_root --> n_section_dj_87baeca7
-  n_section_events_3cbe5e90["events"]:::section
-  lane4 --> n_section_events_3cbe5e90
-  site_root --> n_section_events_3cbe5e90
-  n_section_labels_95442b76["labels"]:::section
-  lane1 --> n_section_labels_95442b76
-  site_root --> n_section_labels_95442b76
-  n_section_landing_c0591660["landing"]:::section
-  lane2 --> n_section_landing_c0591660
-  site_root --> n_section_landing_c0591660
-  n_section_mix_upload_82941fe9["mix-upload"]:::section
-  lane3 --> n_section_mix_upload_82941fe9
-  site_root --> n_section_mix_upload_82941fe9
-  n_section_my_account_af453d19["my-account"]:::section
-  lane4 --> n_section_my_account_af453d19
-  site_root --> n_section_my_account_af453d19
-  n_section_shop_968fb2f5["shop"]:::section
-  lane1 --> n_section_shop_968fb2f5
-  site_root --> n_section_shop_968fb2f5
 
-  subgraph n_subgraph_root_927bb593["(root) cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_46ec9478["Home"]:::page
-    n_section_root_b3e1b12 --> n_m_page_https_www_stldnb_com_46ec9478
-    click n_m_page_https_www_stldnb_com_46ec9478 "https://www.stldnb.com/"
-    n_m_img_https_www_stldnb_com_https_www_stldnb_com_wp_content_plugins_elementor_assets_images_placeholder_png_51019422["img"]:::asset
-    n_m_page_https_www_stldnb_com_46ec9478 -.-> n_m_img_https_www_stldnb_com_https_www_stldnb_com_wp_content_plugins_elementor_assets_images_placeholder_png_51019422
-    click n_m_img_https_www_stldnb_com_https_www_stldnb_com_wp_content_plugins_elementor_assets_images_placeholder_png_51019422 "https://www.stldnb.com/wp-content/plugins/elementor/assets/images/placeholder.png"
+  subgraph cluster_n_seg_root_93935f88 ["(root) cluster"]
+    n_seg_root_93935f88_anchor[" "]:::anchor
   end
-  n_section_root_b3e1b12 --> n_subgraph_root_927bb593
+  site_root --> n_seg_root_93935f88_anchor
 
-  subgraph n_subgraph_artist_page_9e6c2009["artist-page cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_artist_page_277388d2["artist page"]:::page
-    n_section_artist_page_da1d7e9e --> n_m_page_https_www_stldnb_com_artist_page_277388d2
-    click n_m_page_https_www_stldnb_com_artist_page_277388d2 "https://www.stldnb.com/artist-page/"
-    n_m_img_https_www_stldnb_com_artist_page_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_e1372858["img"]:::asset
-    n_m_page_https_www_stldnb_com_artist_page_277388d2 -.-> n_m_img_https_www_stldnb_com_artist_page_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_e1372858
-    click n_m_img_https_www_stldnb_com_artist_page_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_e1372858 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  subgraph cluster_n_seg_artist_page_ce5456f0 ["artist-page cluster"]
+    n_seg_artist_page_ce5456f0_anchor[" "]:::anchor
   end
-  n_section_artist_page_da1d7e9e --> n_subgraph_artist_page_9e6c2009
+  site_root --> n_seg_artist_page_ce5456f0_anchor
 
-  subgraph n_subgraph_blog_cd0271e4["blog cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_blog_ef325991["blog"]:::page
-    n_section_blog_846dce0d --> n_m_page_https_www_stldnb_com_blog_ef325991
-    click n_m_page_https_www_stldnb_com_blog_ef325991 "https://www.stldnb.com/blog/"
-    n_m_path_blog_2025_3d1cb1c3["2025"]:::path
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_06_284f2dde["06"]:::path
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_11_5badf265["11"]:::path
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_boom_boom_shake_shake_b50bcf["boom-boom-shake-shake"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_boom_boom_shake_shake_b50bcf
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_9988e9bb["boom boom shake shake"]:::page
-    n_m_path_blog_2025_06_11_boom_boom_shake_shake_b50bcf --> n_m_page_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_9988e9bb
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_9988e9bb "https://www.stldnb.com/blog/2025/06/11/boom-boom-shake-shake/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_7dbe0479["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_9988e9bb -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_7dbe0479
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_7dbe0479 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_drum_and_bass_a3f42b36["drum-and-bass"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_drum_and_bass_a3f42b36
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_c033e8f8["drum and bass"]:::page
-    n_m_path_blog_2025_06_11_drum_and_bass_a3f42b36 --> n_m_page_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_c033e8f8
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_c033e8f8 "https://www.stldnb.com/blog/2025/06/11/drum-and-bass/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_9c6e610e["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_c033e8f8 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_9c6e610e
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_drum_and_bass_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_9c6e610e "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_testing_the_mix_750366f3["testing-the-mix"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_testing_the_mix_750366f3
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_c4243777["testing the mix"]:::page
-    n_m_path_blog_2025_06_11_testing_the_mix_750366f3 --> n_m_page_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_c4243777
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_c4243777 "https://www.stldnb.com/blog/2025/06/11/testing-the-mix/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_cc46d541["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_c4243777 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_cc46d541
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_testing_the_mix_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_cc46d541 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_that_real_shit_5ea52c6f["that-real-shit"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_that_real_shit_5ea52c6f
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_that_real_shit_83f363a5["that real shit"]:::page
-    n_m_path_blog_2025_06_11_that_real_shit_5ea52c6f --> n_m_page_https_www_stldnb_com_blog_2025_06_11_that_real_shit_83f363a5
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_that_real_shit_83f363a5 "https://www.stldnb.com/blog/2025/06/11/that-real-shit/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_that_real_shit_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c043cadf["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_that_real_shit_83f363a5 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_that_real_shit_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c043cadf
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_that_real_shit_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c043cadf "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_the_renegade_steppas_e1278cec["the-renegade-steppas"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_the_renegade_steppas_e1278cec
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_b64ee0d0["the renegade steppas"]:::page
-    n_m_path_blog_2025_06_11_the_renegade_steppas_e1278cec --> n_m_page_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_b64ee0d0
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_b64ee0d0 "https://www.stldnb.com/blog/2025/06/11/the-renegade-steppas/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_https_stldnb_us_east_1_wordpress_offload_s3_amazonaws_com_wp_content_uploads_2025_06_11021353_steppa_png_ed32ac40["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_b64ee0d0 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_https_stldnb_us_east_1_wordpress_offload_s3_amazonaws_com_wp_content_uploads_2025_06_11021353_steppa_png_ed32ac40
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_https_stldnb_us_east_1_wordpress_offload_s3_amazonaws_com_wp_content_uploads_2025_06_11021353_steppa_png_ed32ac40 "https://stldnb-us-east-1-wordpress-offload.s3.amazonaws.com/wp-content/uploads/2025/06/11021353/steppa.png"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_this_is_the_ish_4fd7f5fe["this-is-the-ish"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_this_is_the_ish_4fd7f5fe
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_7b91f694["this is the ish"]:::page
-    n_m_path_blog_2025_06_11_this_is_the_ish_4fd7f5fe --> n_m_page_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_7b91f694
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_7b91f694 "https://www.stldnb.com/blog/2025/06/11/this-is-the-ish/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_305aaba["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_7b91f694 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_305aaba
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_this_is_the_ish_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_305aaba "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_yeah_yeah_yeah_o_yeah_c7a7bd37["yeah-yeah-yeah-o-yeah"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_yeah_yeah_yeah_o_yeah_c7a7bd37
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_7dd3c43["yeah yeah yeah o yeah"]:::page
-    n_m_path_blog_2025_06_11_yeah_yeah_yeah_o_yeah_c7a7bd37 --> n_m_page_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_7dd3c43
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_7dd3c43 "https://www.stldnb.com/blog/2025/06/11/yeah-yeah-yeah-o-yeah/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_8d87ff5["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_7dd3c43 -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_8d87ff5
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_8d87ff5 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_section_blog_846dce0d --> n_m_path_blog_2025_3d1cb1c3
-    n_m_path_blog_2025_3d1cb1c3 --> n_m_path_blog_2025_06_284f2dde
-    n_m_path_blog_2025_06_284f2dde --> n_m_path_blog_2025_06_11_5badf265
-    n_m_path_blog_2025_06_11_you_know_what_93d345ec["you-know-what"]:::path
-    n_m_path_blog_2025_06_11_5badf265 --> n_m_path_blog_2025_06_11_you_know_what_93d345ec
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_you_know_what_b9d34e1e["you know what"]:::page
-    n_m_path_blog_2025_06_11_you_know_what_93d345ec --> n_m_page_https_www_stldnb_com_blog_2025_06_11_you_know_what_b9d34e1e
-    click n_m_page_https_www_stldnb_com_blog_2025_06_11_you_know_what_b9d34e1e "https://www.stldnb.com/blog/2025/06/11/you-know-what/"
-    n_m_img_https_www_stldnb_com_blog_2025_06_11_you_know_what_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c20a4978["img"]:::asset
-    n_m_page_https_www_stldnb_com_blog_2025_06_11_you_know_what_b9d34e1e -.-> n_m_img_https_www_stldnb_com_blog_2025_06_11_you_know_what_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c20a4978
-    click n_m_img_https_www_stldnb_com_blog_2025_06_11_you_know_what_https_www_stldnb_com_wp_content_uploads_2025_05_Sunset_DJ_Session_scaled_qt9oyarm9y8csichk736bahvau9790z5601cprp3m0_jpg_c20a4978 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
-    n_m_path_blog_category_1dcf24e4["category"]:::path
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_atmospheric_335a284a["atmospheric"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_atmospheric_335a284a
-    n_m_page_https_www_stldnb_com_blog_category_atmospheric_d13c4810["atmospheric"]:::page
-    n_m_path_blog_category_atmospheric_335a284a --> n_m_page_https_www_stldnb_com_blog_category_atmospheric_d13c4810
-    click n_m_page_https_www_stldnb_com_blog_category_atmospheric_d13c4810 "https://www.stldnb.com/blog/category/atmospheric/"
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_jump_up_d6985f71["jump-up"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_jump_up_d6985f71
-    n_m_page_https_www_stldnb_com_blog_category_jump_up_49a2ec89["jump up"]:::page
-    n_m_path_blog_category_jump_up_d6985f71 --> n_m_page_https_www_stldnb_com_blog_category_jump_up_49a2ec89
-    click n_m_page_https_www_stldnb_com_blog_category_jump_up_49a2ec89 "https://www.stldnb.com/blog/category/jump-up/"
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_jungle_old_school_58714cb3["jungle-old-school"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_jungle_old_school_58714cb3
-    n_m_page_https_www_stldnb_com_blog_category_jungle_old_school_3e9666bf["jungle old school"]:::page
-    n_m_path_blog_category_jungle_old_school_58714cb3 --> n_m_page_https_www_stldnb_com_blog_category_jungle_old_school_3e9666bf
-    click n_m_page_https_www_stldnb_com_blog_category_jungle_old_school_3e9666bf "https://www.stldnb.com/blog/category/jungle-old-school/"
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_liquid_837f7111["liquid"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_liquid_837f7111
-    n_m_page_https_www_stldnb_com_blog_category_liquid_5eeef7fb["liquid"]:::page
-    n_m_path_blog_category_liquid_837f7111 --> n_m_page_https_www_stldnb_com_blog_category_liquid_5eeef7fb
-    click n_m_page_https_www_stldnb_com_blog_category_liquid_5eeef7fb "https://www.stldnb.com/blog/category/liquid/"
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_minimum_halftime_94044a96["minimum-halftime"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_minimum_halftime_94044a96
-    n_m_page_https_www_stldnb_com_blog_category_minimum_halftime_bee5547e["minimum halftime"]:::page
-    n_m_path_blog_category_minimum_halftime_94044a96 --> n_m_page_https_www_stldnb_com_blog_category_minimum_halftime_bee5547e
-    click n_m_page_https_www_stldnb_com_blog_category_minimum_halftime_bee5547e "https://www.stldnb.com/blog/category/minimum-halftime/"
-    n_section_blog_846dce0d --> n_m_path_blog_category_1dcf24e4
-    n_m_path_blog_category_neurofunk_fc68e79e["neurofunk"]:::path
-    n_m_path_blog_category_1dcf24e4 --> n_m_path_blog_category_neurofunk_fc68e79e
-    n_m_page_https_www_stldnb_com_blog_category_neurofunk_e2a8931c["neurofunk"]:::page
-    n_m_path_blog_category_neurofunk_fc68e79e --> n_m_page_https_www_stldnb_com_blog_category_neurofunk_e2a8931c
-    click n_m_page_https_www_stldnb_com_blog_category_neurofunk_e2a8931c "https://www.stldnb.com/blog/category/neurofunk/"
+  subgraph cluster_n_seg_blog_cc04b70b ["blog cluster"]
+    n_seg_blog_cc04b70b_anchor[" "]:::anchor
   end
-  n_section_blog_846dce0d --> n_subgraph_blog_cd0271e4
+  site_root --> n_seg_blog_cc04b70b_anchor
 
-  subgraph n_subgraph_cart_e34516c6["cart cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_cart_181c47cb["cart"]:::page
-    n_section_cart_452e0cdb --> n_m_page_https_www_stldnb_com_cart_181c47cb
-    click n_m_page_https_www_stldnb_com_cart_181c47cb "https://www.stldnb.com/cart/"
+  subgraph cluster_n_seg_cart_45709fdd ["cart cluster"]
+    n_seg_cart_45709fdd_anchor[" "]:::anchor
   end
-  n_section_cart_452e0cdb --> n_subgraph_cart_e34516c6
+  site_root --> n_seg_cart_45709fdd_anchor
 
-  subgraph n_subgraph_checkout_76d45404["checkout cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_checkout_a2b626b1["checkout"]:::page
-    n_section_checkout_b329368d --> n_m_page_https_www_stldnb_com_checkout_a2b626b1
-    click n_m_page_https_www_stldnb_com_checkout_a2b626b1 "https://www.stldnb.com/checkout/"
+  subgraph cluster_n_seg_checkout_ded27007 ["checkout cluster"]
+    n_seg_checkout_ded27007_anchor[" "]:::anchor
   end
-  n_section_checkout_b329368d --> n_subgraph_checkout_76d45404
+  site_root --> n_seg_checkout_ded27007_anchor
 
-  subgraph n_subgraph_contact_4b45e544["contact cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_contact_92a04471["contact"]:::page
-    n_section_contact_9290a5ff --> n_m_page_https_www_stldnb_com_contact_92a04471
-    click n_m_page_https_www_stldnb_com_contact_92a04471 "https://www.stldnb.com/contact/"
-    n_m_img_https_www_stldnb_com_contact_https_www_stldnb_com_wp_content_uploads_2025_04_Register_image_1_jpg_cfa1bacf["img"]:::asset
-    n_m_page_https_www_stldnb_com_contact_92a04471 -.-> n_m_img_https_www_stldnb_com_contact_https_www_stldnb_com_wp_content_uploads_2025_04_Register_image_1_jpg_cfa1bacf
-    click n_m_img_https_www_stldnb_com_contact_https_www_stldnb_com_wp_content_uploads_2025_04_Register_image_1_jpg_cfa1bacf "https://www.stldnb.com/wp-content/uploads/2025/04/Register-image-1.jpg"
+  subgraph cluster_n_seg_contact_de334b3d ["contact cluster"]
+    n_seg_contact_de334b3d_anchor[" "]:::anchor
   end
-  n_section_contact_9290a5ff --> n_subgraph_contact_4b45e544
+  site_root --> n_seg_contact_de334b3d_anchor
 
-  subgraph n_subgraph_dj_4884795a["dj cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_dj_e40dd22f["dj"]:::page
-    n_section_dj_87baeca7 --> n_m_page_https_www_stldnb_com_dj_e40dd22f
-    click n_m_page_https_www_stldnb_com_dj_e40dd22f "https://www.stldnb.com/dj/"
-    n_m_img_https_www_stldnb_com_dj_https_www_stldnb_com_wp_content_uploads_2025_04_ecbc_385b_4b8b_a4e2_9e373e481bc2_png_bbffe479["img"]:::asset
-    n_m_page_https_www_stldnb_com_dj_e40dd22f -.-> n_m_img_https_www_stldnb_com_dj_https_www_stldnb_com_wp_content_uploads_2025_04_ecbc_385b_4b8b_a4e2_9e373e481bc2_png_bbffe479
-    click n_m_img_https_www_stldnb_com_dj_https_www_stldnb_com_wp_content_uploads_2025_04_ecbc_385b_4b8b_a4e2_9e373e481bc2_png_bbffe479 "https://www.stldnb.com/wp-content/uploads/2025/04/ecbc-385b-4b8b-a4e2-9e373e481bc2.png"
+  subgraph cluster_n_seg_dj_4f3cb525 ["dj cluster"]
+    n_seg_dj_4f3cb525_anchor[" "]:::anchor
   end
-  n_section_dj_87baeca7 --> n_subgraph_dj_4884795a
+  site_root --> n_seg_dj_4f3cb525_anchor
 
-  subgraph n_subgraph_events_80658549["events cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_events_ad9e8e92["events"]:::page
-    n_section_events_3cbe5e90 --> n_m_page_https_www_stldnb_com_events_ad9e8e92
-    click n_m_page_https_www_stldnb_com_events_ad9e8e92 "https://www.stldnb.com/events/"
-    n_m_img_https_www_stldnb_com_events_https_www_stldnb_com_wp_content_uploads_2025_04_490699900_691419713842174_2954602819894996427_n_jpg_4db42c3b["img"]:::asset
-    n_m_page_https_www_stldnb_com_events_ad9e8e92 -.-> n_m_img_https_www_stldnb_com_events_https_www_stldnb_com_wp_content_uploads_2025_04_490699900_691419713842174_2954602819894996427_n_jpg_4db42c3b
-    click n_m_img_https_www_stldnb_com_events_https_www_stldnb_com_wp_content_uploads_2025_04_490699900_691419713842174_2954602819894996427_n_jpg_4db42c3b "https://www.stldnb.com/wp-content/uploads/2025/04/490699900_691419713842174_2954602819894996427_n.jpg"
+  subgraph cluster_n_seg_events_ba2a4bce ["events cluster"]
+    n_seg_events_ba2a4bce_anchor[" "]:::anchor
   end
-  n_section_events_3cbe5e90 --> n_subgraph_events_80658549
+  site_root --> n_seg_events_ba2a4bce_anchor
 
-  subgraph n_subgraph_labels_331b4c6f["labels cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_labels_dbc697c0["labels"]:::page
-    n_section_labels_95442b76 --> n_m_page_https_www_stldnb_com_labels_dbc697c0
-    click n_m_page_https_www_stldnb_com_labels_dbc697c0 "https://www.stldnb.com/labels/"
-    n_m_img_https_www_stldnb_com_labels_https_www_stldnb_com_wp_content_uploads_2025_04_d40e7f38_fb4d_4836_93b2_722d2a346146_webp_e137a994["img"]:::asset
-    n_m_page_https_www_stldnb_com_labels_dbc697c0 -.-> n_m_img_https_www_stldnb_com_labels_https_www_stldnb_com_wp_content_uploads_2025_04_d40e7f38_fb4d_4836_93b2_722d2a346146_webp_e137a994
-    click n_m_img_https_www_stldnb_com_labels_https_www_stldnb_com_wp_content_uploads_2025_04_d40e7f38_fb4d_4836_93b2_722d2a346146_webp_e137a994 "https://www.stldnb.com/wp-content/uploads/2025/04/d40e7f38-fb4d-4836-93b2-722d2a346146.webp"
+  subgraph cluster_n_seg_labels_93fff7c0 ["labels cluster"]
+    n_seg_labels_93fff7c0_anchor[" "]:::anchor
   end
-  n_section_labels_95442b76 --> n_subgraph_labels_331b4c6f
+  site_root --> n_seg_labels_93fff7c0_anchor
 
-  subgraph n_subgraph_landing_50a817c3["landing cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_landing_8d35c584["landing"]:::page
-    n_section_landing_c0591660 --> n_m_page_https_www_stldnb_com_landing_8d35c584
-    click n_m_page_https_www_stldnb_com_landing_8d35c584 "https://www.stldnb.com/landing/"
+  subgraph cluster_n_seg_landing_ba724a1a ["landing cluster"]
+    n_seg_landing_ba724a1a_anchor[" "]:::anchor
   end
-  n_section_landing_c0591660 --> n_subgraph_landing_50a817c3
+  site_root --> n_seg_landing_ba724a1a_anchor
 
-  subgraph n_subgraph_mix_upload_532ef30["mix-upload cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_mix_upload_1d05eccd["mix upload"]:::page
-    n_section_mix_upload_82941fe9 --> n_m_page_https_www_stldnb_com_mix_upload_1d05eccd
-    click n_m_page_https_www_stldnb_com_mix_upload_1d05eccd "https://www.stldnb.com/mix-upload/"
-    n_m_img_https_www_stldnb_com_mix_upload_https_www_stldnb_com_wp_content_uploads_2025_04_STLDNB_100_hLogo_new_copy_1_png_4793870e["img"]:::asset
-    n_m_page_https_www_stldnb_com_mix_upload_1d05eccd -.-> n_m_img_https_www_stldnb_com_mix_upload_https_www_stldnb_com_wp_content_uploads_2025_04_STLDNB_100_hLogo_new_copy_1_png_4793870e
-    click n_m_img_https_www_stldnb_com_mix_upload_https_www_stldnb_com_wp_content_uploads_2025_04_STLDNB_100_hLogo_new_copy_1_png_4793870e "https://www.stldnb.com/wp-content/uploads/2025/04/STLDNB-100-hLogo-new-copy-1.png"
+  subgraph cluster_n_seg_mix_upload_28fb3b87 ["mix-upload cluster"]
+    n_seg_mix_upload_28fb3b87_anchor[" "]:::anchor
   end
-  n_section_mix_upload_82941fe9 --> n_subgraph_mix_upload_532ef30
+  site_root --> n_seg_mix_upload_28fb3b87_anchor
 
-  subgraph n_subgraph_my_account_574d57a4["my-account cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_my_account_c8984ed1["my account"]:::page
-    n_section_my_account_af453d19 --> n_m_page_https_www_stldnb_com_my_account_c8984ed1
-    click n_m_page_https_www_stldnb_com_my_account_c8984ed1 "https://www.stldnb.com/my-account/"
+  subgraph cluster_n_seg_my_account_be799d0b ["my-account cluster"]
+    n_seg_my_account_be799d0b_anchor[" "]:::anchor
   end
-  n_section_my_account_af453d19 --> n_subgraph_my_account_574d57a4
+  site_root --> n_seg_my_account_be799d0b_anchor
 
-  subgraph n_subgraph_shop_b1057b24["shop cluster"]
-    direction TB
-    n_m_page_https_www_stldnb_com_shop_1ff9e951["shop"]:::page
-    n_section_shop_968fb2f5 --> n_m_page_https_www_stldnb_com_shop_1ff9e951
-    click n_m_page_https_www_stldnb_com_shop_1ff9e951 "https://www.stldnb.com/shop/"
+  subgraph cluster_n_seg_shop_5c75cd27 ["shop cluster"]
+    n_seg_shop_5c75cd27_anchor[" "]:::anchor
   end
-  n_section_shop_968fb2f5 --> n_subgraph_shop_b1057b24
+  site_root --> n_seg_shop_5c75cd27_anchor
 
-  classDef site fill:#f8fafc,stroke:#475569,color:#0f172a,stroke-width:2px;
-  classDef section fill:#f1f5f9,stroke:#64748b,color:#0f172a;
-  classDef path fill:#eef2ff,stroke:#818cf8,color:#111827;
-  classDef page fill:#ecfeff,stroke:#06b6d4,color:#0f172a;
-  classDef asset fill:#fff7ed,stroke:#fb923c,color:#7c2d12,stroke-dasharray:3 3;
-  classDef more fill:#ffffff,stroke:#cbd5e1,color:#334155,stroke-dasharray:2 2;
+  n_www_stldnb_com_6c166b9a["Home"]:::page
+  n_seg_root_93935f88_anchor --> n_www_stldnb_com_6c166b9a
+  click n_www_stldnb_com_6c166b9a "https://www.stldnb.com/"
+  n_www_stldnb_com_6c166b9a_img_1["img 1"]:::image
+  n_www_stldnb_com_6c166b9a -.-> n_www_stldnb_com_6c166b9a_img_1
+  click n_www_stldnb_com_6c166b9a_img_1 "https://www.stldnb.com/wp-content/plugins/elementor/assets/images/placeholder.png"
+
+  n_www_stldnb_com_artist_page_7bed98fc["artist page"]:::page
+  n_seg_artist_page_ce5456f0_anchor --> n_www_stldnb_com_artist_page_7bed98fc
+  click n_www_stldnb_com_artist_page_7bed98fc "https://www.stldnb.com/artist-page/"
+  n_www_stldnb_com_artist_page_7bed98fc_img_1["img 1"]:::image
+  n_www_stldnb_com_artist_page_7bed98fc -.-> n_www_stldnb_com_artist_page_7bed98fc_img_1
+  click n_www_stldnb_com_artist_page_7bed98fc_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+
+  n_www_stldnb_com_blog_818d222f["blog"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_818d222f
+  click n_www_stldnb_com_blog_818d222f "https://www.stldnb.com/blog/"
+  n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d["yeah yeah yeah o yeah"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d
+  click n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d "https://www.stldnb.com/blog/2025/06/11/yeah-yeah-yeah-o-yeah/"
+  n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d -.-> n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d_img_1
+  click n_www_stldnb_com_blog_2025_06_11_yeah_yeah_yeah_o_yeah_d10b257d_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589["boom boom shake shake"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589
+  click n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589 "https://www.stldnb.com/blog/2025/06/11/boom-boom-shake-shake/"
+  n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589 -.-> n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589_img_1
+  click n_www_stldnb_com_blog_2025_06_11_boom_boom_shake_shake_96e13589_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa["drum and bass"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa
+  click n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa "https://www.stldnb.com/blog/2025/06/11/drum-and-bass/"
+  n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa -.-> n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa_img_1
+  click n_www_stldnb_com_blog_2025_06_11_drum_and_bass_d3522faa_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f["that real shit"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f
+  click n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f "https://www.stldnb.com/blog/2025/06/11/that-real-shit/"
+  n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f -.-> n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f_img_1
+  click n_www_stldnb_com_blog_2025_06_11_that_real_shit_2220128f_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894["you know what"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894
+  click n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894 "https://www.stldnb.com/blog/2025/06/11/you-know-what/"
+  n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894 -.-> n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894_img_1
+  click n_www_stldnb_com_blog_2025_06_11_you_know_what_ba8f8894_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6["this is the ish"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6
+  click n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6 "https://www.stldnb.com/blog/2025/06/11/this-is-the-ish/"
+  n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6 -.-> n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6_img_1
+  click n_www_stldnb_com_blog_2025_06_11_this_is_the_ish_16b080a6_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229["testing the mix"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229
+  click n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229 "https://www.stldnb.com/blog/2025/06/11/testing-the-mix/"
+  n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229 -.-> n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229_img_1
+  click n_www_stldnb_com_blog_2025_06_11_testing_the_mix_dbe4b229_img_1 "https://www.stldnb.com/wp-content/uploads/2025/05/Sunset-DJ-Session-scaled-qt9oyarm9y8csichk736bahvau9790z5601cprp3m0.jpg"
+  n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce["the renegade steppas"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce
+  click n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce "https://www.stldnb.com/blog/2025/06/11/the-renegade-steppas/"
+  n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce_img_1["img 1"]:::image
+  n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce -.-> n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce_img_1
+  click n_www_stldnb_com_blog_2025_06_11_the_renegade_steppas_bc2ea5ce_img_1 "https://stldnb-us-east-1-wordpress-offload.s3.amazonaws.com/wp-content/uploads/2025/06/11021353/steppa.png"
+  n_www_stldnb_com_blog_818d222f["blog"]:::page
+  n_seg_blog_cc04b70b_anchor --> n_www_stldnb_com_blog_818d222f
+  click n_www_stldnb_com_blog_818d222f "https://www.stldnb.com/blog/"
+
+  n_www_stldnb_com_cart_c388369d["cart"]:::page
+  n_seg_cart_45709fdd_anchor --> n_www_stldnb_com_cart_c388369d
+  click n_www_stldnb_com_cart_c388369d "https://www.stldnb.com/cart/"
+
+  n_www_stldnb_com_checkout_7adb98a3["checkout"]:::page
+  n_seg_checkout_ded27007_anchor --> n_www_stldnb_com_checkout_7adb98a3
+  click n_www_stldnb_com_checkout_7adb98a3 "https://www.stldnb.com/checkout/"
+
+  n_www_stldnb_com_contact_1b1519a7["contact"]:::page
+  n_seg_contact_de334b3d_anchor --> n_www_stldnb_com_contact_1b1519a7
+  click n_www_stldnb_com_contact_1b1519a7 "https://www.stldnb.com/contact/"
+  n_www_stldnb_com_contact_1b1519a7_img_1["img 1"]:::image
+  n_www_stldnb_com_contact_1b1519a7 -.-> n_www_stldnb_com_contact_1b1519a7_img_1
+  click n_www_stldnb_com_contact_1b1519a7_img_1 "https://www.stldnb.com/wp-content/uploads/2025/04/Register-image-1.jpg"
+
+  n_www_stldnb_com_dj_d4e0722d["dj"]:::page
+  n_seg_dj_4f3cb525_anchor --> n_www_stldnb_com_dj_d4e0722d
+  click n_www_stldnb_com_dj_d4e0722d "https://www.stldnb.com/dj/"
+  n_www_stldnb_com_dj_d4e0722d_img_1["img 1"]:::image
+  n_www_stldnb_com_dj_d4e0722d -.-> n_www_stldnb_com_dj_d4e0722d_img_1
+  click n_www_stldnb_com_dj_d4e0722d_img_1 "https://www.stldnb.com/wp-content/uploads/2025/04/ecbc-385b-4b8b-a4e2-9e373e481bc2.png"
+
+  n_www_stldnb_com_events_58b609f0["events"]:::page
+  n_seg_events_ba2a4bce_anchor --> n_www_stldnb_com_events_58b609f0
+  click n_www_stldnb_com_events_58b609f0 "https://www.stldnb.com/events/"
+  n_www_stldnb_com_events_58b609f0_img_1["img 1"]:::image
+  n_www_stldnb_com_events_58b609f0 -.-> n_www_stldnb_com_events_58b609f0_img_1
+  click n_www_stldnb_com_events_58b609f0_img_1 "https://www.stldnb.com/wp-content/uploads/2025/04/490699900_691419713842174_2954602819894996427_n.jpg"
+
+  n_www_stldnb_com_labels_60545372["labels"]:::page
+  n_seg_labels_93fff7c0_anchor --> n_www_stldnb_com_labels_60545372
+  click n_www_stldnb_com_labels_60545372 "https://www.stldnb.com/labels/"
+  n_www_stldnb_com_labels_60545372_img_1["img 1"]:::image
+  n_www_stldnb_com_labels_60545372 -.-> n_www_stldnb_com_labels_60545372_img_1
+  click n_www_stldnb_com_labels_60545372_img_1 "https://www.stldnb.com/wp-content/uploads/2025/04/d40e7f38-fb4d-4836-93b2-722d2a346146.webp"
+
+  n_www_stldnb_com_landing_c7dbf52e["landing"]:::page
+  n_seg_landing_ba724a1a_anchor --> n_www_stldnb_com_landing_c7dbf52e
+  click n_www_stldnb_com_landing_c7dbf52e "https://www.stldnb.com/landing/"
+
+  n_www_stldnb_com_mix_upload_2baa8e03["mix upload"]:::page
+  n_seg_mix_upload_28fb3b87_anchor --> n_www_stldnb_com_mix_upload_2baa8e03
+  click n_www_stldnb_com_mix_upload_2baa8e03 "https://www.stldnb.com/mix-upload/"
+  n_www_stldnb_com_mix_upload_2baa8e03_img_1["img 1"]:::image
+  n_www_stldnb_com_mix_upload_2baa8e03 -.-> n_www_stldnb_com_mix_upload_2baa8e03_img_1
+  click n_www_stldnb_com_mix_upload_2baa8e03_img_1 "https://www.stldnb.com/wp-content/uploads/2025/04/STLDNB-100-hLogo-new-copy-1.png"
+
+  n_www_stldnb_com_my_account_aac66103["my account"]:::page
+  n_seg_my_account_be799d0b_anchor --> n_www_stldnb_com_my_account_aac66103
+  click n_www_stldnb_com_my_account_aac66103 "https://www.stldnb.com/my-account/"
+
+  n_www_stldnb_com_shop_7dbe44db["shop"]:::page
+  n_seg_shop_5c75cd27_anchor --> n_www_stldnb_com_shop_7dbe44db
+  click n_www_stldnb_com_shop_7dbe44db "https://www.stldnb.com/shop/"
+
+  classDef site font-size:14px,stroke-width:2px,stroke:#475569,fill:#f8fafc;
+  classDef section font-weight:bold,stroke:#64748b,fill:#f1f5f9;
+  classDef anchor opacity:0;
+  classDef page stroke:#06b6d4,fill:#ecfeff;
+  classDef image stroke:#fb923c,fill:#fff7ed,stroke-dasharray:3 3;

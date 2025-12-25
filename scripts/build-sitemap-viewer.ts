@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * Build dist/sitemap/index.html viewer (Mermaid + Thought Map).
+ * Build dist/sitemap/index.html - Modern sitemap visualization viewer
  *
- * Update:
- *  - Hide placeholder grouping nodes in BOTH Mermaid and Thought Map:
- *      "type: ...", "date: ...", "asset host: ..."
- *    These are used for categorization behind the scenes but should not be visible.
+ * Features:
+ * - Mermaid diagrams (overview + full) with pan/zoom
+ * - Interactive Thought Map (Cytoscape.js) with:
+ *   - Click-to-drill-down navigation
+ *   - Multiple view dimensions (section, category, date, asset-host)
+ *   - Alternative layouts (hierarchical, radial, timeline, force)
+ *   - Search and filtering
+ *   - URL state persistence
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -24,76 +28,161 @@ tryCopy(path.join("node_modules", "cytoscape", "dist", "cytoscape.esm.min.js"), 
 tryCopy(path.join("node_modules", "cytoscape", "dist", "cytoscape.esm.js"), vendorTarget);
 
 const html = `<!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <title>STLDNB Sitemap Explorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-    header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 12px;}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-    button,a.btn,input,select{padding:8px 10px;border:1px solid #d1d5db;background:#fff;border-radius:10px;}
-    button{cursor:pointer;}
-    a.btn{text-decoration:none;color:#111;display:inline-block;}
-    .hint{color:#6b7280;font-size:13px;}
-    #thoughtControls{border-top:1px solid #eef2f7;margin-top:10px;padding-top:10px;}
-    #thoughtControls.hidden{display:none!important;}
-    #viewport{width:100vw;height:calc(100vh - 124px);overflow:hidden;background:#fafafa;}
-    #stage{transform-origin:0 0;}
-    #cy{width:100%;height:100%;}
-    .hidden{display:none!important;}
-    #statusbar{border-top:1px solid #e5e7eb;background:#fff;padding:8px 12px;font-size:12px;color:#374151;display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
-    .group{display:flex;gap:8px;align-items:center;}
-    label{color:#6b7280;font-size:12px;}
+    :root {
+      --bg: #fafafa;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --stroke: #e2e8f0;
+      --btn: #ffffff;
+      --btnBorder: #cbd5e1;
+      --btnHover: #f8fafc;
+      --focus: #2563eb;
+      --active: #3b82f6;
+      --activeText: #ffffff;
+      --siteBg: #f8fafc;
+      --siteBorder: #475569;
+      --sectionBg: #f1f5f9;
+      --sectionBorder: #64748b;
+      --categoryBg: #eef2ff;
+      --categoryBorder: #818cf8;
+      --pageBg: #ecfeff;
+      --pageBorder: #06b6d4;
+      --imgBg: #fff7ed;
+      --imgBorder: #fb923c;
+      --dateBg: #fef3c7;
+      --dateBorder: #f59e0b;
+      --edge: #94a3b8;
+      --edgeAsset: #fb923c;
+      --edgeRelated: #a78bfa;
+      --breadcrumbBg: #fffbeb;
+      --breadcrumbBorder: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: var(--text); background: var(--bg); }
+
+    header { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--stroke); padding: 10px 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .row + .row { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--stroke); }
+
+    button, a.btn, input, select { padding: 8px 12px; border: 1px solid var(--btnBorder); background: var(--btn); border-radius: 6px; font: inherit; color: inherit; cursor: pointer; }
+    button:hover, a.btn:hover { background: var(--btnHover); }
+    button.active { background: var(--active); color: var(--activeText); border-color: var(--active); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    a.btn { text-decoration: none; display: inline-block; }
+
+    input[type="number"] { width: 70px; }
+    input[type="text"] { min-width: 200px; }
+    input[type="checkbox"] { width: auto; margin: 0; }
+
+    .group { display: flex; gap: 6px; align-items: center; padding: 4px 10px; background: #f9fafb; border-radius: 6px; }
+    label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    label.checkbox { display: flex; gap: 6px; align-items: center; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .spacer { flex: 1; }
+    .hidden { display: none !important; }
+
+    #breadcrumbs { background: var(--breadcrumbBg); border-bottom: 1px solid var(--breadcrumbBorder); padding: 6px 12px; }
+    .breadcrumb { padding: 4px 10px; font-size: 12px; background: white; border: 1px solid var(--btnBorder); border-radius: 4px; margin: 0 4px 0 0; }
+    .breadcrumb:hover { background: var(--btnHover); }
+    .breadcrumb:last-child { background: var(--active); color: var(--activeText); border-color: var(--active); }
+
+    #viewport { width: 100vw; height: calc(100vh - 145px); overflow: hidden; background: var(--bg); }
+    #stage { transform-origin: 0 0; }
+    #cy { width: 100%; height: 100%; }
+
+    #statusbar { border-top: 1px solid var(--stroke); background: var(--panel); padding: 8px 12px; font-size: 12px; color: var(--text); }
+
+    .err { position: fixed; left: 12px; bottom: 12px; max-width: 70vw; max-height: 40vh; overflow: auto; background: #111; color: #fff; padding: 12px; border-radius: 8px; opacity: 0.95; z-index: 9999; display: none; white-space: pre-wrap; font-family: monospace; font-size: 11px; }
   </style>
 </head>
 <body>
 <header>
+  <!-- Main tabs -->
   <div class="row">
-    <button id="tabMermaid" aria-pressed="true">Mermaid</button>
-    <button id="tabThought" aria-pressed="false">Thought Map</button>
-    <button id="btnOverview">Mermaid overview</button>
-    <button id="btnFull">Mermaid full</button>
-    <a class="btn" href="sitemap.svg" target="_blank">SVG overview</a>
-    <a class="btn" href="unified.svg" target="_blank">SVG full</a>
-    <span class="hint">Drag to pan • Ctrl/Cmd+wheel zoom (Mermaid) • Wheel zoom (Thought Map)</span>
+    <button id="tabMermaid" class="active">Mermaid View</button>
+    <button id="tabThought">Thought Map</button>
+    <span class="spacer"></span>
+    <span class="hint">Modern sitemap visualization</span>
   </div>
 
-  <div id="thoughtControls" class="row hidden" aria-hidden="true">
+  <!-- Mermaid controls -->
+  <div class="row" id="mermaidControls">
+    <button id="btnOverview">Overview</button>
+    <button id="btnFull" class="active">Full Site</button>
+    <a class="btn" href="sitemap.svg" target="_blank" rel="noopener">Export SVG (Overview)</a>
+    <a class="btn" href="unified.svg" target="_blank" rel="noopener">Export SVG (Full)</a>
+    <span class="spacer"></span>
+    <span class="hint">Drag to pan • Ctrl/Cmd+wheel to zoom • Double-click to reset</span>
+  </div>
+
+  <!-- Thought Map controls -->
+  <div class="row hidden" id="thoughtControls">
+    <button id="btnBack" disabled>← Back</button>
+
     <div class="group">
-      <label>Thought Map display</label>
-      <select id="thoughtDisplay">
-        <option value="source">Source (left→right)</option>
-        <option value="features">Features (focus subtree)</option>
+      <label>Group by</label>
+      <select id="viewDimension">
+        <option value="section">Section (URL path)</option>
+        <option value="category">Category (WordPress)</option>
+        <option value="date">Date (Posts)</option>
+        <option value="asset-host">Asset Host (CDN)</option>
       </select>
     </div>
 
     <div class="group">
-      <label>Features root</label>
-      <select id="featuresRoot"></select>
+      <label>Root</label>
+      <select id="focusRoot">
+        <option value="site">Whole site</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label>Layout</label>
+      <select id="layoutType">
+        <option value="breadthfirst">Hierarchical</option>
+        <option value="radial">Radial</option>
+        <option value="timeline">Timeline</option>
+        <option value="force">Force-directed</option>
+      </select>
     </div>
 
     <div class="group">
       <label>Depth</label>
-      <select id="featuresDepth">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3" selected>3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-      </select>
+      <input type="number" id="maxDepth" min="1" max="10" value="3" />
     </div>
 
-    <div class="group" id="focusOnlyWrap">
-      <label style="display:flex;gap:6px;align-items:center;">
-        <input id="focusOnly" type="checkbox" checked />
-        Hide non-subtree
-      </label>
+    <div class="group">
+      <input type="text" id="searchBox" placeholder="Search nodes..." />
+      <button id="clearSearch" title="Clear search">×</button>
     </div>
   </div>
+
+  <div class="row hidden" id="thoughtToggles">
+    <label class="checkbox">
+      <input type="checkbox" id="showImages" checked />
+      Show images
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" id="focusOnly" />
+      Focus mode (hide unrelated nodes)
+    </label>
+    <span class="spacer"></span>
+    <button id="btnFitView">Fit to View</button>
+  </div>
 </header>
+
+<!-- Breadcrumbs for navigation history -->
+<div id="breadcrumbs" class="hidden">
+  <span class="hint">Path:</span>
+  <button class="breadcrumb" data-node="site">Site</button>
+</div>
 
 <div id="viewport">
   <div id="stage"></div>
@@ -101,407 +190,788 @@ const html = `<!doctype html>
 </div>
 
 <div id="statusbar">
-  <div class="group">Status: <span id="status">booting…</span></div>
+  <span id="status">Loading...</span>
 </div>
 
+<pre class="err" id="err"></pre>
+
 <script type="module">
-  const statusEl = document.getElementById("status");
-  const setStatus = (t) => { statusEl.textContent = t; };
-  const thoughtControls = document.getElementById("thoughtControls");
+const STATUS = document.getElementById('status');
+const setStatus = (m) => { STATUS.textContent = String(m || 'Ready'); };
 
-  const PLACEHOLDER_LABEL_RE = /^(type:\\s|date:\\s|asset host:\\s|category:\\s)/i;
+// Error handling
+const err = document.getElementById('err');
+const showErr = (m) => { err.textContent = String(m); err.style.display = 'block'; setStatus('Error (see overlay)'); };
+window.addEventListener('error', (e) => showErr(e.message || e.error));
+window.addEventListener('unhandledrejection', (e) => showErr(e.reason));
 
-  // Error overlay
-  const err = document.createElement("pre");
-  err.style.cssText = "position:fixed;left:12px;bottom:54px;max-width:85vw;max-height:45vh;overflow:auto;background:#111;color:#fff;padding:10px;border-radius:10px;opacity:.95;z-index:9999;display:none;white-space:pre-wrap;";
-  document.body.appendChild(err);
-  const showErr = (m) => { err.textContent = String(m); err.style.display = "block"; setStatus("error (see overlay)"); };
-  window.addEventListener("error", (e) => showErr(e.message || e.error));
-  window.addEventListener("unhandledrejection", (e) => showErr(e.reason));
+// DOM elements
+const viewport = document.getElementById('viewport');
+const stage = document.getElementById('stage');
+const cyEl = document.getElementById('cy');
+const tabMermaid = document.getElementById('tabMermaid');
+const tabThought = document.getElementById('tabThought');
+const mermaidControls = document.getElementById('mermaidControls');
+const thoughtControls = document.getElementById('thoughtControls');
+const thoughtToggles = document.getElementById('thoughtToggles');
+const breadcrumbs = document.getElementById('breadcrumbs');
+const btnBack = document.getElementById('btnBack');
+const btnOverview = document.getElementById('btnOverview');
+const btnFull = document.getElementById('btnFull');
+const viewDimensionSel = document.getElementById('viewDimension');
+const focusRootSel = document.getElementById('focusRoot');
+const layoutTypeSel = document.getElementById('layoutType');
+const maxDepthInput = document.getElementById('maxDepth');
+const searchBox = document.getElementById('searchBox');
+const clearSearchBtn = document.getElementById('clearSearch');
+const showImagesChk = document.getElementById('showImages');
+const focusOnlyChk = document.getElementById('focusOnly');
+const btnFitView = document.getElementById('btnFitView');
 
-  const viewport = document.getElementById("viewport");
-  const stage = document.getElementById("stage");
-  const cyEl = document.getElementById("cy");
-  const tabMermaid = document.getElementById("tabMermaid");
-  const tabThought = document.getElementById("tabThought");
+const PLACEHOLDER_LABEL_RE = /^(type:\\s|date:\\s|asset host:\\s|category:\\s)/i;
 
-  const thoughtDisplaySel = document.getElementById("thoughtDisplay");
-  const featuresRootSel = document.getElementById("featuresRoot");
-  const featuresDepthSel = document.getElementById("featuresDepth");
-  const focusOnlyChk = document.getElementById("focusOnly");
-  const focusOnlyWrap = document.getElementById("focusOnlyWrap");
+// ============================================================================
+// MERMAID VIEW
+// ============================================================================
 
-  // Mermaid pan/zoom
-  let scale = 1, tx = 20, ty = 20, panning = false, sx = 0, sy = 0;
-  const apply = () => { stage.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")"; };
-  const reset = () => { scale = 1; tx = 20; ty = 20; apply(); };
+let mermaid = null;
+let scale = 1, tx = 20, ty = 20, panning = false, sx = 0, sy = 0;
 
-  viewport.addEventListener("mousedown", (e) => {
-    if (!cyEl.classList.contains("hidden")) return;
-    panning = true; sx = e.clientX - tx; sy = e.clientY - ty;
-  });
-  window.addEventListener("mouseup", () => { panning = false; });
-  window.addEventListener("mousemove", (e) => {
-    if (!panning) return;
-    tx = e.clientX - sx; ty = e.clientY - sy; apply();
-  });
-  viewport.addEventListener("wheel", (e) => {
-    if (!cyEl.classList.contains("hidden")) return;
-    if (!(e.ctrlKey || e.metaKey)) return;
-    e.preventDefault();
-    scale = Math.min(3, Math.max(0.2, scale * (e.deltaY < 0 ? 1.1 : 0.9)));
-    apply();
-  }, { passive:false });
+const apply = () => { stage.style.transform = \`translate(\${tx}px, \${ty}px) scale(\${scale})\`; };
+const reset = () => { scale = 1; tx = 20; ty = 20; apply(); };
 
-  let mermaid = null;
-  async function loadMermaid() {
-    setStatus("loading mermaid…");
-    const mod = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
-    mermaid = mod.default || mod;
-    mermaid.initialize({ startOnLoad:false, securityLevel:"loose", flowchart:{ useMaxWidth:false } });
-    setStatus("mermaid ready");
-  }
+viewport.addEventListener('mousedown', (e) => {
+  if (!cyEl.classList.contains('hidden')) return;
+  panning = true; sx = e.clientX - tx; sy = e.clientY - ty;
+});
+window.addEventListener('mouseup', () => { panning = false; });
+window.addEventListener('mousemove', (e) => {
+  if (!panning) return;
+  tx = e.clientX - sx; ty = e.clientY - sy; apply();
+});
+viewport.addEventListener('wheel', (e) => {
+  if (!cyEl.classList.contains('hidden')) return;
+  if (!(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  scale = Math.min(3, Math.max(0.2, scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+  apply();
+}, { passive: false });
+viewport.addEventListener('dblclick', () => {
+  if (!cyEl.classList.contains('hidden')) return;
+  reset();
+});
 
-  async function fetchText(file) {
-    const res = await fetch(file, { cache: "no-store" });
-    const text = await res.text();
-    if (!res.ok) throw new Error("Fetch failed " + res.status + " for " + file + "\\n\\n" + text.slice(0, 200));
-    return text;
-  }
+async function loadMermaid() {
+  setStatus('Loading Mermaid...');
+  const mod = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+  mermaid = mod.default || mod;
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', flowchart: { useMaxWidth: false } });
+  setStatus('Ready');
+}
 
-  function sanitizeMermaidSrc(src) {
-    const lines = src.split(/\\r?\\n/);
-    const placeholderIds = new Set();
-
-    for (const ln of lines) {
-      const m = ln.match(/^\\s*([A-Za-z0-9_]+)\\s*\\[\\s*"(.*?)"\\s*\\]/) || ln.match(/^\\s*([A-Za-z0-9_]+)\\s*\\[\\s*'(.*?)'\\s*\\]/);
-      if (!m) continue;
-      const id = m[1];
-      const label = (m[2] || "").trim();
-      if (PLACEHOLDER_LABEL_RE.test(label)) placeholderIds.add(id);
-    }
-    if (!placeholderIds.size) return src;
-
-    const keep = [];
-    for (const ln of lines) {
-      if ([...placeholderIds].some(id => ln.match(new RegExp("^\\\\s*" + id + "\\\\s*\\\\[")))) continue;
-      if ([...placeholderIds].some(id => ln.includes(" " + id + " ") || ln.includes("-->" + id) || ln.includes(id + "-->") || ln.trim().startsWith("click " + id + " "))) continue;
-      keep.push(ln);
-    }
-    return keep.join("\\n");
-  }
-
-  async function renderMmd(file) {
-    try {
-      if (!mermaid) await loadMermaid();
-      setStatus("rendering " + file + " …");
-      stage.innerHTML = "<div style='padding:14px;color:#6b7280'>Loading <code>" + file + "</code>…</div>";
-      let src = await fetchText(file);
-      src = sanitizeMermaidSrc(src);
-      const id = "mmd_" + Math.random().toString(16).slice(2);
-      const out = await mermaid.render(id, src);
-      stage.innerHTML = out.svg;
-      stage.querySelectorAll("a").forEach(a => a.setAttribute("target", "_blank"));
-      reset();
-      setStatus("rendered " + file);
-    } catch (e) {
-      showErr("Mermaid render failed for " + file + "\\n\\n" + e);
-    }
-  }
-
-  // Thought Map
-  let cy = null;
-
-  async function loadCytoscape() {
-    try {
-      const mod = await import("./vendor/cytoscape.esm.min.js");
-      return mod.default || mod;
-    } catch (e1) {
-      const urls = [
-        "https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.esm.min.js",
-        "https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.js",
-        "https://esm.sh/cytoscape@3.30.2"
-      ];
-      for (const u of urls) { try { const mod = await import(u); return mod.default || mod; } catch {} }
-      throw e1;
-    }
-  }
-
-  function cssEscape(id) {
-    return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, "\\\\$&");
-  }
-
-  function isPlaceholderNode(n) {
-    const label = String(n.data("label") || "");
-    return PLACEHOLDER_LABEL_RE.test(label);
-  }
-
-  function layoutSource(rootId) {
-    if (!cy) return;
-    setStatus("layout: source");
-    // Show the full graph (no filtering).
-    cy.elements().removeClass("dim").removeClass("hiddenEl");
-    cy.batch(() => {
-      cy.nodes().forEach(n => { n.data("size", 54); n.data("fsize", 10); });
+async function renderMmd(file) {
+  try {
+    if (!mermaid) await loadMermaid();
+    setStatus(\`Rendering \${file}...\`);
+    const src = await fetch(file).then(r => {
+      if (!r.ok) throw new Error(\`Failed to fetch \${file} (\${r.status})\`);
+      return r.text();
     });
-    cy.layout({
-      name: "breadthfirst",
-      directed: true,
-      spacingFactor: 1.45,
-      animate: true,
-      fit: true,
-      padding: 70,
-      orientation: "horizontal",
-      roots: rootId ? "#" + cssEscape(rootId) : undefined
-    }).run();
+    const id = 'mmd_' + Math.random().toString(16).slice(2);
+    const out = await mermaid.render(id, src);
+    stage.innerHTML = out.svg;
+    stage.querySelectorAll('a').forEach(a => a.setAttribute('target', '_blank'));
+    reset();
+    setStatus('Ready');
+  } catch (e) {
+    showErr(\`Mermaid render failed for \${file}\\n\\n\${e}\`);
   }
+}
 
-  function bfsUndirectedWithDepth(rootId, maxDepth) {
-    const keep = new Set([rootId]);
-    const depthMap = new Map([[rootId, 0]]);
-    const root = cy.getElementById(rootId);
-    const rootKind = String(root.data("kind") || "");
+// ============================================================================
+// THOUGHT MAP VIEW
+// ============================================================================
 
-    let frontier = [rootId];
-    for (let d = 0; d < maxDepth; d++) {
-      const next = [];
-      for (const id of frontier) {
-        const n = cy.getElementById(id);
-        if (!n || n.empty()) continue;
-        if (isPlaceholderNode(n)) continue;
+let cy = null;
+let graph = null;
+let navigationHistory = [];
+let currentRoot = 'site';
+let searchQuery = '';
+let searchResults = new Set();
 
-        n.connectedEdges().forEach(e => {
-          const s = e.source().id();
-          const t = e.target().id();
-          const otherId = (s === id) ? t : s;
-          const other = cy.getElementById(otherId);
-          if (!other || other.empty()) return;
-          if (isPlaceholderNode(other)) return;
-
-          const otherKind = String(other.data("kind") || "");
-          if (rootKind === "section" && otherKind === "site") return;
-          const thisKind = String(n.data("kind") || "");
-          if (thisKind === "section" && otherKind === "section" && otherId !== rootId) return;
-
-          if (!keep.has(otherId)) {
-            keep.add(otherId);
-            depthMap.set(otherId, (depthMap.get(id) ?? 0) + 1);
-            next.push(otherId);
-          }
-        });
-      }
-      frontier = next;
-      if (!frontier.length) break;
+async function loadCytoscape() {
+  try {
+    const mod = await import('./vendor/cytoscape.esm.min.js');
+    return mod.default || mod;
+  } catch (e1) {
+    const urls = [
+      'https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.esm.min.js',
+      'https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.esm.min.js',
+      'https://esm.sh/cytoscape@3.30.2'
+    ];
+    for (const u of urls) {
+      try {
+        const mod = await import(u);
+        return mod.default || mod;
+      } catch {}
     }
-    return { keep, depthMap };
+    throw e1;
+  }
+}
+
+function cssEscape(id) {
+  return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, '\\\\$&');
+}
+
+function isPlaceholderNode(n) {
+  const label = String(n.data?.label || n.data('label') || '');
+  return PLACEHOLDER_LABEL_RE.test(label);
+}
+
+function buildPathToNode(targetId) {
+  // BFS from site to find shortest path
+  const queue = [['site']];
+  const visited = new Set(['site']);
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const current = path[path.length - 1];
+
+    if (current === targetId) return path;
+
+    const node = cy.getElementById(current);
+    if (!node || node.empty()) continue;
+
+    node.connectedEdges().forEach(edge => {
+      const next = edge.target().id() === current ? edge.source().id() : edge.target().id();
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push([...path, next]);
+      }
+    });
   }
 
-  function applyDepthScaling(keep, depthMap, rootId) {
-    const BASE = 80, MIN = 26, RATIO = 0.84;
-    const BASE_FONT = 12, MIN_FONT = 8;
+  return [targetId];
+}
+
+function updateBreadcrumbs(nodeId) {
+  if (!cy) return;
+
+  const path = buildPathToNode(nodeId);
+
+  breadcrumbs.innerHTML = '<span class="hint">Path:</span>';
+
+  for (const id of path) {
+    const n = cy.getElementById(id);
+    if (n.empty()) continue;
+    const label = n.data('label') || id;
+    const btn = document.createElement('button');
+    btn.className = 'breadcrumb';
+    btn.textContent = label;
+    btn.dataset.node = id;
+    btn.onclick = () => drillDown(id);
+    breadcrumbs.appendChild(btn);
+  }
+
+  breadcrumbs.classList.remove('hidden');
+  btnBack.disabled = navigationHistory.length === 0;
+}
+
+function drillDown(nodeId) {
+  if (currentRoot !== nodeId && currentRoot !== '') {
+    navigationHistory.push({
+      root: currentRoot,
+      dimension: viewDimensionSel.value,
+      layout: layoutTypeSel.value,
+      depth: Number(maxDepthInput.value)
+    });
+  }
+
+  currentRoot = nodeId;
+  focusRootSel.value = nodeId;
+  updateBreadcrumbs(nodeId);
+  applyThoughtDisplay();
+  updateURL();
+}
+
+function navigateBack() {
+  if (navigationHistory.length === 0) return;
+
+  const prev = navigationHistory.pop();
+  currentRoot = prev.root;
+  viewDimensionSel.value = prev.dimension;
+  layoutTypeSel.value = prev.layout;
+  maxDepthInput.value = prev.depth;
+
+  focusRootSel.value = currentRoot;
+  updateBreadcrumbs(currentRoot);
+  applyThoughtDisplay();
+  updateURL();
+}
+
+function bfsUndirectedWithDepth(rootId, maxDepth) {
+  const keep = new Set([rootId]);
+  const depthMap = new Map([[rootId, 0]]);
+  const root = cy.getElementById(rootId);
+  const rootKind = String(root.data('kind') || '');
+
+  let frontier = [rootId];
+  for (let d = 0; d < maxDepth; d++) {
+    const next = [];
+    for (const id of frontier) {
+      const n = cy.getElementById(id);
+      if (!n || n.empty() || isPlaceholderNode(n)) continue;
+
+      n.connectedEdges().forEach(e => {
+        const s = e.source().id();
+        const t = e.target().id();
+        const otherId = (s === id) ? t : s;
+        const other = cy.getElementById(otherId);
+        if (!other || other.empty() || isPlaceholderNode(other)) return;
+
+        const otherKind = String(other.data('kind') || '');
+        if (rootKind === 'section' && otherKind === 'site') return;
+        const thisKind = String(n.data('kind') || '');
+        if (thisKind === 'section' && otherKind === 'section' && otherId !== rootId) return;
+
+        if (!keep.has(otherId)) {
+          keep.add(otherId);
+          depthMap.set(otherId, (depthMap.get(id) ?? 0) + 1);
+          next.push(otherId);
+        }
+      });
+    }
+    frontier = next;
+    if (!frontier.length) break;
+  }
+
+  return { keep, depthMap };
+}
+
+function applyDepthScaling(keep, depthMap, rootId) {
+  const BASE = 80, MIN = 26, RATIO = 0.84;
+  const BASE_FONT = 12, MIN_FONT = 8;
+
+  cy.batch(() => {
+    cy.nodes().forEach(n => {
+      const id = n.id();
+      if (!keep.has(id)) {
+        n.data('size', 46);
+        n.data('fsize', 9);
+        return;
+      }
+
+      const d = depthMap.get(id) ?? 0;
+      let sz = Math.round(BASE * Math.pow(RATIO, d));
+      if (id === rootId) sz = BASE;
+      if (sz < MIN) sz = MIN;
+
+      let fs = Math.round(BASE_FONT * Math.pow(RATIO, d));
+      if (id === rootId) fs = BASE_FONT;
+      if (fs < MIN_FONT) fs = MIN_FONT;
+
+      n.data('size', sz);
+      n.data('fsize', fs);
+    });
+  });
+}
+
+function layoutBreadthfirst(rootId, depth) {
+  const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
+  applyDepthScaling(keep, depthMap, rootId);
+  filterElements(keep, focusOnlyChk.checked);
+
+  cy.layout({
+    name: 'breadthfirst',
+    directed: true,
+    spacingFactor: 1.35,
+    animate: true,
+    fit: true,
+    padding: 100,
+    orientation: 'horizontal',
+    roots: '#' + cssEscape(rootId)
+  }).run();
+
+  const keptNodes = cy.nodes().filter(n => keep.has(n.id()));
+  if (keptNodes.length) cy.fit(keptNodes, 110);
+
+  setStatus(\`Layout: hierarchical (depth \${depth})\`);
+}
+
+function layoutRadial(rootId, depth) {
+  const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
+  applyDepthScaling(keep, depthMap, rootId);
+  filterElements(keep, focusOnlyChk.checked);
+
+  cy.layout({
+    name: 'breadthfirst',
+    directed: true,
+    spacingFactor: 1.8,
+    animate: true,
+    fit: true,
+    padding: 120,
+    circle: true,
+    roots: '#' + cssEscape(rootId)
+  }).run();
+
+  setStatus(\`Layout: radial (depth \${depth})\`);
+}
+
+function layoutTimeline(rootId, depth) {
+  const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
+
+  const nodesWithDates = [];
+  cy.nodes().forEach(n => {
+    if (keep.has(n.id())) {
+      const dateStr = n.data('date');
+      const timestamp = dateStr ? new Date(dateStr).getTime() : 0;
+      nodesWithDates.push({ id: n.id(), timestamp });
+    }
+  });
+
+  nodesWithDates.sort((a, b) => a.timestamp - b.timestamp);
+
+  applyDepthScaling(keep, depthMap, rootId);
+  filterElements(keep, focusOnlyChk.checked);
+
+  cy.layout({
+    name: 'preset',
+    positions: (node) => {
+      const idx = nodesWithDates.findIndex(n => n.id === node.id());
+      if (idx === -1) return { x: 0, y: 0 };
+
+      const total = nodesWithDates.length;
+      const spacing = 200;
+
+      return {
+        x: idx * spacing,
+        y: (depthMap.get(node.id()) || 0) * 150
+      };
+    },
+    fit: true,
+    padding: 100,
+    animate: true
+  }).run();
+
+  setStatus(\`Layout: timeline (depth \${depth})\`);
+}
+
+function layoutForce(rootId, depth) {
+  const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
+  applyDepthScaling(keep, depthMap, rootId);
+  filterElements(keep, focusOnlyChk.checked);
+
+  cy.layout({
+    name: 'cose',
+    animate: true,
+    fit: true,
+    padding: 100,
+    nodeRepulsion: 8000,
+    idealEdgeLength: 100,
+    edgeElasticity: 100,
+    nestingFactor: 1.2,
+    gravity: 1,
+    numIter: 1000,
+    randomize: false
+  }).run();
+
+  setStatus(\`Layout: force-directed (depth \${depth})\`);
+}
+
+function filterElements(keep, focusOnly) {
+  cy.elements().removeClass('dim').removeClass('hiddenEl');
+
+  const showImages = showImagesChk.checked;
+
+  // When viewing whole site, show all content (don't hide based on focus)
+  const isWholeSite = currentRoot === 'site';
+
+  if (focusOnly && !isWholeSite) {
+    const keepEls = cy.elements().filter(el => {
+      if (el.isNode()) {
+        if (!showImages && el.data('kind') === 'image') return false;
+        return keep.has(el.id());
+      }
+      return keep.has(el.source().id()) && keep.has(el.target().id());
+    });
+    cy.elements().not(keepEls).addClass('hiddenEl');
+  } else {
+    cy.nodes().forEach(n => {
+      if (!showImages && n.data('kind') === 'image') {
+        n.addClass('hiddenEl');
+        return;
+      }
+      // When viewing whole site, show everything
+      if (!isWholeSite && !keep.has(n.id())) {
+        n.addClass('dim');
+      }
+    });
+    cy.edges().forEach(e => {
+      if (!isWholeSite) {
+        const ok = keep.has(e.source().id()) && keep.has(e.target().id());
+        if (!ok) e.addClass('dim');
+      }
+    });
+  }
+}
+
+function applyThoughtDisplay() {
+  if (!cy || !graph) return;
+
+  const rootId = currentRoot || 'site';
+  const layout = layoutTypeSel.value;
+  let depth = Number(maxDepthInput.value);
+
+  // When viewing whole site, show all sections (increase depth to see full structure)
+  if (rootId === 'site') {
+    depth = Math.max(depth, 10); // Show full site structure
+  }
+
+  switch (layout) {
+    case 'breadthfirst':
+      layoutBreadthfirst(rootId, depth);
+      break;
+    case 'radial':
+      layoutRadial(rootId, depth);
+      break;
+    case 'timeline':
+      layoutTimeline(rootId, depth);
+      break;
+    case 'force':
+      layoutForce(rootId, depth);
+      break;
+  }
+
+  if (searchQuery) {
+    performSearch(searchQuery);
+  }
+}
+
+function populateRootSelector() {
+  const dimension = viewDimensionSel.value;
+  focusRootSel.innerHTML = '<option value="site">Whole site</option>';
+
+  const candidates = new Map();
+
+  switch (dimension) {
+    case 'section':
+      cy.nodes("[kind='section']").forEach(n => {
+        if (!isPlaceholderNode(n)) {
+          candidates.set(n.id(), n.data('label'));
+        }
+      });
+      break;
+
+    case 'category':
+      cy.nodes("[kind='category']").forEach(n => {
+        const label = n.data('label').replace(/^category:\\s*/i, '');
+        candidates.set(n.id(), label);
+      });
+      break;
+
+    case 'date':
+      cy.nodes("[kind='date']").forEach(n => {
+        const label = n.data('label').replace(/^date:\\s*/i, '');
+        candidates.set(n.id(), label);
+      });
+      break;
+
+    case 'asset-host':
+      cy.nodes("[kind='asset_host']").forEach(n => {
+        const label = n.data('label').replace(/^asset host:\\s*/i, '');
+        candidates.set(n.id(), label);
+      });
+      break;
+  }
+
+  Array.from(candidates.entries())
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .forEach(([id, label]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = label;
+      focusRootSel.appendChild(opt);
+    });
+
+  if (focusRootSel.value !== currentRoot) {
+    focusRootSel.value = currentRoot;
+  }
+}
+
+function performSearch(query) {
+  searchQuery = query.toLowerCase().trim();
+  searchResults.clear();
+
+  if (!searchQuery) {
+    cy.elements().removeClass('search-match').removeClass('search-hidden');
+    setStatus('Ready');
+    return;
+  }
+
+  cy.nodes().forEach(n => {
+    const label = String(n.data('label') || '').toLowerCase();
+    const url = String(n.data('url') || '').toLowerCase();
+    const category = String(n.data('category') || '').toLowerCase();
+
+    if (label.includes(searchQuery) || url.includes(searchQuery) || category.includes(searchQuery)) {
+      searchResults.add(n.id());
+    }
+  });
+
+  cy.batch(() => {
+    cy.nodes().forEach(n => {
+      if (searchResults.has(n.id())) {
+        n.addClass('search-match');
+        n.removeClass('search-hidden');
+      } else {
+        n.removeClass('search-match');
+        n.addClass('search-hidden');
+      }
+    });
+
+    cy.edges().forEach(e => {
+      const srcMatch = searchResults.has(e.source().id());
+      const tgtMatch = searchResults.has(e.target().id());
+      if (srcMatch && tgtMatch) {
+        e.removeClass('search-hidden');
+      } else {
+        e.addClass('search-hidden');
+      }
+    });
+  });
+
+  setStatus(\`Found \${searchResults.size} matches\`);
+
+  if (searchResults.size > 0) {
+    const matchNodes = cy.nodes().filter(n => searchResults.has(n.id()));
+    cy.fit(matchNodes, 100);
+  }
+}
+
+async function initThought() {
+  if (cy) return;
+
+  try {
+    setStatus('Loading Cytoscape...');
+    const cytoscape = await loadCytoscape();
+
+    setStatus('Loading graph.json...');
+    const txt = await fetch('graph.json').then(r => {
+      if (!r.ok) throw new Error(\`Failed to fetch graph.json (\${r.status})\`);
+      return r.text();
+    });
+    graph = JSON.parse(txt);
+
+    const nodes = (graph.nodes || []).filter(n => {
+      const label = String(n?.data?.label || '');
+      return !PLACEHOLDER_LABEL_RE.test(label.trim());
+    });
+    const nodeSet = new Set(nodes.map(n => n.data.id));
+    const edges = (graph.edges || []).filter(e =>
+      nodeSet.has(e?.data?.source) && nodeSet.has(e?.data?.target)
+    );
+
+    const elements = []
+      .concat(nodes.map(n => ({ data: n.data })))
+      .concat(edges.map(e => ({ data: e.data })));
+
+    cy = cytoscape({
+      container: cyEl,
+      elements,
+      style: [
+        { selector: 'node', style: {
+          'label': 'data(label)',
+          'font-size': 'data(fsize)',
+          'text-wrap': 'wrap',
+          'text-max-width': 120,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'width': 'data(size)',
+          'height': 'data(size)',
+          'background-color': '#fff',
+          'border-width': 1,
+          'border-color': '#cbd5e1',
+          'shape': 'round-rectangle',
+          'padding': '6px'
+        }},
+        { selector: "node[kind='site']", style: { 'border-width': 2, 'border-color': '#475569', 'background-color': '#f8fafc' }},
+        { selector: "node[kind='section']", style: { 'background-color': '#f1f5f9', 'border-color': '#64748b', 'font-weight': 'bold' }},
+        { selector: "node[kind='category']", style: { 'background-color': '#eef2ff', 'border-color': '#818cf8' }},
+        { selector: "node[kind='date']", style: { 'background-color': '#fef3c7', 'border-color': '#f59e0b' }},
+        { selector: "node[kind='page']", style: { 'background-color': '#ecfeff', 'border-color': '#06b6d4' }},
+        { selector: "node[kind='image']", style: { 'background-color': '#fff7ed', 'border-color': '#fb923c', 'border-style': 'dashed' }},
+        { selector: "node[kind='image'][img]", style: { 'background-image': 'data(img)', 'background-fit': 'cover', 'background-opacity': 0.35 }},
+        { selector: 'edge', style: { 'width': 1, 'line-color': '#94a3b8', 'curve-style': 'bezier' }},
+        { selector: "edge[kind='asset']", style: { 'line-style': 'dashed', 'line-color': '#fb923c' }},
+        { selector: '.dim', style: { 'opacity': 0.10 }},
+        { selector: '.hiddenEl', style: { 'display': 'none' }},
+        { selector: '.search-match', style: { 'border-width': 3, 'border-color': '#f59e0b', 'background-color': '#fef3c7' }},
+        { selector: '.search-hidden', style: { 'display': 'none' }}
+      ],
+      wheelSensitivity: 0.22
+    });
 
     cy.batch(() => {
       cy.nodes().forEach(n => {
-        const id = n.id();
-        if (!keep.has(id)) { n.data("size", 46); n.data("fsize", 9); return; }
-        const d = depthMap.get(id) ?? 0;
-        let sz = Math.round(BASE * Math.pow(RATIO, d));
-        if (id === rootId) sz = BASE;
-        if (sz < MIN) sz = MIN;
-
-        let fs = Math.round(BASE_FONT * Math.pow(RATIO, d));
-        if (id === rootId) fs = BASE_FONT;
-        if (fs < MIN_FONT) fs = MIN_FONT;
-
-        n.data("size", sz);
-        n.data("fsize", fs);
+        n.data('size', 54);
+        n.data('fsize', 10);
       });
     });
-  }
 
-  function layoutFeatures(rootId, depth) {
-    if (!cy) return;
-    setStatus("layout: features");
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target;
+      const url = node.data('url');
+      const kind = node.data('kind');
 
-    const { keep, depthMap } = bfsUndirectedWithDepth(rootId, depth);
+      if (url && (kind === 'page' || kind === 'image')) {
+        window.open(url, '_blank');
+        return;
+      }
 
-    // Two modes:
-    // - Focus-only: hide everything outside the chosen subtree.
-    // - Context: keep the full graph but dim everything outside the subtree.
-    const focusOnly = !!(focusOnlyChk && focusOnlyChk.checked);
-    cy.elements().removeClass("dim").removeClass("hiddenEl");
-
-    if (focusOnly) {
-      const keepEls = cy.elements().filter(el => {
-        if (el.isNode()) return keep.has(el.id());
-        // edges: keep only if both endpoints are in keep
-        return keep.has(el.source().id()) && keep.has(el.target().id());
-      });
-      cy.elements().not(keepEls).addClass("hiddenEl");
-    } else {
-      cy.elements().addClass("dim");
-      cy.nodes().forEach(n => { if (keep.has(n.id())) n.removeClass("dim"); });
-      cy.edges().forEach(e => {
-        const ok = keep.has(e.source().id()) && keep.has(e.target().id());
-        if (ok) e.removeClass("dim"); else e.addClass("dim");
-      });
-    }
-
-    applyDepthScaling(keep, depthMap, rootId);
-
-    const keptNodes = cy.nodes().filter(n => keep.has(n.id()));
-    cy.layout({
-      name: "breadthfirst",
-      directed: true,
-      spacingFactor: 1.35,
-      animate: true,
-      fit: true,
-      padding: 100,
-      orientation: "horizontal",
-      roots: "#" + cssEscape(rootId)
-    }).run();
-
-    if (keptNodes.length) cy.fit(keptNodes, 110);
-  }
-
-  function populateFeatureRoots() {
-    const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
-    if (!site) return;
-
-    const candidates = new Map();
-    const direct = site.connectedEdges().connectedNodes().filter(n => n.id() !== site.id());
-    direct.forEach(n => {
-      if (isPlaceholderNode(n)) return;
-      const kind = String(n.data("kind") || "");
-      const label = String(n.data("label") || n.id());
-      if (kind === "section") candidates.set(n.id(), label);
+      if (['site', 'section', 'category', 'date', 'asset_host'].includes(kind)) {
+        drillDown(node.id());
+      }
     });
 
-    featuresRootSel.innerHTML = "";
-    Array.from(candidates.entries()).sort((a,b) => String(a[1]).localeCompare(String(b[1]))).forEach(([id,label]) => {
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = label;
-      featuresRootSel.appendChild(opt);
-    });
-    if (featuresRootSel.options.length) featuresRootSel.value = featuresRootSel.options[0].value;
+    populateRootSelector();
+    updateBreadcrumbs(currentRoot);
+    applyThoughtDisplay();
+    setStatus('Ready');
+  } catch (e) {
+    showErr(\`Thought map init failed\\n\\n\${e}\`);
+  }
+}
+
+// ============================================================================
+// URL STATE PERSISTENCE
+// ============================================================================
+
+function updateURL() {
+  const params = new URLSearchParams();
+
+  if (currentRoot !== 'site') params.set('root', currentRoot);
+  if (viewDimensionSel.value !== 'section') params.set('dim', viewDimensionSel.value);
+  if (layoutTypeSel.value !== 'breadthfirst') params.set('layout', layoutTypeSel.value);
+  if (Number(maxDepthInput.value) !== 3) params.set('depth', maxDepthInput.value);
+  if (searchQuery) params.set('q', searchQuery);
+  if (!showImagesChk.checked) params.set('imgs', '0');
+  if (focusOnlyChk.checked) params.set('focus', '1');
+  if (tabThought.classList.contains('active')) params.set('tab', 'thought');
+
+  const url = params.toString() ? \`?\${params.toString()}\` : window.location.pathname;
+  window.history.replaceState({}, '', url);
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('tab') === 'thought') {
+    setTab('thought');
   }
 
-  function applyThoughtDisplay() {
-    if (!cy) return;
-    const site = cy.nodes("[kind='site']")[0] || cy.nodes()[0];
-    const siteId = site ? site.id() : null;
-
-    const mode = thoughtDisplaySel.value;
-    // Only show the focus-only toggle in Features mode.
-    if (focusOnlyWrap) focusOnlyWrap.style.display = mode === "features" ? "" : "none";
-    if (mode === "source") {
-      layoutSource(siteId);
-    } else {
-      const root = featuresRootSel.value || siteId;
-      const depth = Number(featuresDepthSel.value || "3");
-      if (root) layoutFeatures(root, depth);
-    }
+  if (params.has('root')) currentRoot = params.get('root');
+  if (params.has('dim')) viewDimensionSel.value = params.get('dim');
+  if (params.has('layout')) layoutTypeSel.value = params.get('layout');
+  if (params.has('depth')) maxDepthInput.value = params.get('depth');
+  if (params.has('q')) {
+    searchQuery = params.get('q');
+    searchBox.value = searchQuery;
   }
+  if (params.has('imgs')) showImagesChk.checked = params.get('imgs') !== '0';
+  if (params.has('focus')) focusOnlyChk.checked = params.get('focus') === '1';
+}
 
-  async function initThought() {
-    if (cy) return;
-    try {
-      setStatus("loading cytoscape…");
-      const cytoscape = await loadCytoscape();
+// ============================================================================
+// UI EVENT HANDLERS
+// ============================================================================
 
-      setStatus("loading graph.json…");
-      const txt = await fetchText("graph.json");
-      const data = JSON.parse(txt);
+function setTab(which) {
+  const thought = which === 'thought';
 
-      // Filter out placeholder nodes/edges
-      const nodes = (data.nodes || []).filter(n => {
-        const label = String(n?.data?.label || "");
-        return !PLACEHOLDER_LABEL_RE.test(label.trim());
-      });
-      const nodeSet = new Set(nodes.map(n => n.data.id));
-      const edges = (data.edges || []).filter(e => nodeSet.has(e?.data?.source) && nodeSet.has(e?.data?.target));
+  cyEl.classList.toggle('hidden', !thought);
+  stage.classList.toggle('hidden', thought);
+  mermaidControls.classList.toggle('hidden', thought);
+  thoughtControls.classList.toggle('hidden', !thought);
+  thoughtToggles.classList.toggle('hidden', !thought);
+  breadcrumbs.classList.toggle('hidden', !thought || currentRoot === 'site');
 
-      const elements = []
-        .concat(nodes.map(n => ({ data: n.data })))
-        .concat(edges.map(e => ({ data: e.data })));
+  tabMermaid.classList.toggle('active', !thought);
+  tabThought.classList.toggle('active', thought);
 
-      cy = cytoscape({
-        container: cyEl,
-        elements,
-        style: [
-          { selector: "node", style: {
-              "label":"data(label)",
-              "font-size":"data(fsize)",
-              "text-wrap":"wrap",
-              "text-max-width":120,
-              "text-valign":"center",
-              "text-halign":"center",
-              "width":"data(size)",
-              "height":"data(size)",
-              "background-color":"#fff",
-              "border-width":1,
-              "border-color":"#cbd5e1",
-              "shape":"round-rectangle",
-              "padding":"6px"
-          } },
-          { selector: "node[kind='site']", style: { "border-width":2,"border-color":"#475569","background-color":"#f8fafc" } },
-          { selector: "node[kind='section']", style: { "background-color":"#f1f5f9","border-color":"#64748b","font-weight":"bold" } },
-          { selector: "node[kind='path']", style: { "background-color":"#eef2ff","border-color":"#818cf8" } },
-          { selector: "node[kind='page']", style: { "background-color":"#ecfeff","border-color":"#06b6d4" } },
-          { selector: "node[kind='image']", style: { "background-color":"#fff7ed","border-color":"#fb923c","border-style":"dashed" } },
-          { selector: "node[kind='image'][img]", style: { "background-image":"data(img)","background-fit":"cover","background-opacity":0.35 } },
-          { selector: "edge", style: { "width":1,"line-color":"#94a3b8","curve-style":"bezier" } },
-          { selector: "edge[kind='asset']", style: { "line-style":"dashed","line-color":"#fb923c" } },
-          { selector: ".dim", style: { "opacity":0.10 } },
-          { selector: ".hiddenEl", style: { "display":"none" } }
-        ],
-        wheelSensitivity: 0.22
-      });
+  if (thought) initThought();
+  updateURL();
+}
 
-      cy.batch(() => { cy.nodes().forEach(n => { n.data("size", 54); n.data("fsize", 10); }); });
+function setMermaidView(view) {
+  btnOverview.classList.toggle('active', view === 'overview');
+  btnFull.classList.toggle('active', view === 'full');
+  renderMmd(view === 'overview' ? 'index.mmd' : 'unified.mmd');
+}
 
-      cy.on("tap", "node", (evt) => {
-        const url = evt.target.data("url");
-        if (url) window.open(url, "_blank");
-      });
+tabMermaid.onclick = () => setTab('mermaid');
+tabThought.onclick = () => setTab('thought');
+btnOverview.onclick = () => setMermaidView('overview');
+btnFull.onclick = () => setMermaidView('full');
+btnBack.onclick = navigateBack;
+btnFitView.onclick = () => { if (cy) cy.fit(cy.elements(':visible'), 40); };
 
-      populateFeatureRoots();
-      applyThoughtDisplay();
-      setStatus("thought map ready");
-    } catch (e) {
-      showErr("Thought map init failed\\n\\n" + e);
-    }
-  }
+viewDimensionSel.onchange = () => {
+  populateRootSelector();
+  applyThoughtDisplay();
+  updateURL();
+};
 
-  function setTab(which) {
-    const thought = which === "thought";
-    cyEl.classList.toggle("hidden", !thought);
-    stage.classList.toggle("hidden", thought);
-    tabMermaid.setAttribute("aria-pressed", String(!thought));
-    tabThought.setAttribute("aria-pressed", String(thought));
+focusRootSel.onchange = () => {
+  drillDown(focusRootSel.value);
+};
 
-    thoughtControls.classList.toggle("hidden", !thought);
-    thoughtControls.setAttribute("aria-hidden", String(!thought));
+layoutTypeSel.onchange = () => {
+  applyThoughtDisplay();
+  updateURL();
+};
 
-    if (thought) initThought();
-  }
+maxDepthInput.onchange = () => {
+  applyThoughtDisplay();
+  updateURL();
+};
 
-  tabMermaid.onclick = () => setTab("mermaid");
-  tabThought.onclick = () => setTab("thought");
-  document.getElementById("btnOverview").onclick = () => renderMmd("index.mmd");
-  document.getElementById("btnFull").onclick = () => renderMmd("unified.mmd");
+let searchTimeout;
+searchBox.oninput = (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    performSearch(e.target.value);
+    updateURL();
+  }, 300);
+};
 
-  thoughtDisplaySel.addEventListener("change", applyThoughtDisplay);
-  featuresRootSel.addEventListener("change", applyThoughtDisplay);
-  featuresDepthSel.addEventListener("change", applyThoughtDisplay);
-  focusOnlyChk.addEventListener("change", applyThoughtDisplay);
+clearSearchBtn.onclick = () => {
+  searchBox.value = '';
+  performSearch('');
+  updateURL();
+};
 
-  setTab("mermaid");
-  renderMmd("index.mmd");
+showImagesChk.onchange = () => {
+  applyThoughtDisplay();
+  updateURL();
+};
+
+focusOnlyChk.onchange = () => {
+  applyThoughtDisplay();
+  updateURL();
+};
+
+// ============================================================================
+// INITIALIZE
+// ============================================================================
+
+loadFromURL();
+setTab('mermaid');
+// Default to the whole-site overview (more legible). Users can click "Mermaid full" for the complete graph.
+setMermaidView('overview');
+
 </script>
 </body>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
-console.log("✅ Wrote dist/sitemap/index.html (hides type/date/asset-host placeholder nodes)");
+console.log("✅ Wrote dist/sitemap/index.html (modern navigation with drill-down, multi-dimension, layouts, search)");
